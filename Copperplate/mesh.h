@@ -2,24 +2,29 @@
 
 #include <string>
 #include <iostream>
+#include <glm/ext/matrix_float4x4.hpp>
 
+namespace Copperplate {
+	class Mesh {
+	public:
+		Mesh(float* verts, int numVerts, unsigned int* inds, int numInds);
 
-class Mesh {
-public:
-	Mesh(float* verts, int numVerts, unsigned int* inds, int numInds);
+		void Draw(unsigned int shaderId);
 
-	void Draw();
+		void SetTransform(glm::mat4 ModelMatrix);
 
-private:
-	float* m_Vertices;
-	unsigned int* m_Indices;
+	private:
+		float* m_Vertices;
+		unsigned int* m_Indices;
 
-	unsigned int m_VertexArrayObject;
-	unsigned int m_VertexBuffer;
-	unsigned int m_ElementBuffer;
-};
+		glm::mat4 m_ModelMatrix;
 
-Mesh* createTestMesh();
+		unsigned int m_VertexArrayObject;
+		unsigned int m_VertexBuffer;
+		unsigned int m_ElementBuffer;
+	};
 
-GLenum glCheckError_(const char* file, int line);
-#define glCheckError() glCheckError_(__FILE__, __LINE__) 
+	std::unique_ptr<Mesh> createTestMesh();
+
+	 
+}

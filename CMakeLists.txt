@@ -14,7 +14,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # Allow using Folders within the VS project
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+# Flag needed for glm
+set(BUILD_STATIC_LIBS ON)
+
 # Add every subdirectory with a CMakeLists File
 add_subdirectory(Copperplate)
 add_subdirectory(thirdparty/glfw-3.3.2)
 add_subdirectory(thirdparty/glad)
+add_subdirectory(thirdparty/glm)
