@@ -2,6 +2,7 @@
 
 #include "application.h"
 #include "rendering.h"
+#include <glm\gtx\string_cast.hpp>
 
 namespace Copperplate {
 
@@ -18,11 +19,15 @@ namespace Copperplate {
 
 		glClearColor(0.2f, 0.8f, 0.3f, 1.0f);
 
-		m_TestShader = std::make_unique<Shader>("shaders/flatcolor.vert", "shaders/flatcolor.frag");
+		//m_TestShader = std::make_unique<Shader>("shaders/flatcolor.vert", "shaders/flatcolor.frag");
+		m_TestShader = std::make_unique<Shader>("shaders/flatcolor.vert", "shaders/lines.geom", "shaders/flatcolor.frag");
 		glCheckError();
 
-		m_TestMesh = createTestMesh();
+		m_TestMesh = MeshCreator::CreateTestMesh();
 		glCheckError();
+
+		//TESTING
+		m_TestMesh = MeshCreator::ImportMesh("SuzanneSmooth.obj"); 
 
 		ShouldClose = false;
 	}
@@ -33,14 +38,19 @@ namespace Copperplate {
 			glfwPollEvents();
 
 			//TEMPORARY: move Camera
-			m_Camera->Move(0.02f, 0.0f, 0.0f);
+			//m_Camera->Move(0.02f, 0.0f, 0.0f);
 
 			//Render
 			glClear(GL_COLOR_BUFFER_BIT);
 			m_TestShader->Use();
 			m_TestShader->SetMat4("view", m_Camera->GetViewMatrix());
 			m_TestShader->SetMat4("projection", m_Camera->GetProjectionMatrix());
-			glCheckError();
+
+			//Testing
+			glm::vec3 viewDir = m_Camera->GetForwardVector(); 
+			m_TestShader->SetVec3("viewDirection", viewDir);
+
+			glCheckError();  
 			m_TestMesh->Draw(m_TestShader->GetId());
 			glCheckError();
 
@@ -49,11 +59,26 @@ namespace Copperplate {
 	}
 
 	void Application::HandleKeyInput(int key) {
-		if (key == GLFW_KEY_W) {
+		if (key == GLFW_KEY_E) {
 			m_Camera->Move(0.0f, 0.0f, -0.1f);
 		}
-		else if (key == GLFW_KEY_S) {
+		else if (key == GLFW_KEY_Q) {
 			m_Camera->Move(0.0f, 0.0f, 0.1f);
+		}
+		else if (key == GLFW_KEY_W) {
+			m_Camera->Move(0.0f, 0.03f, 0.0f);
+		}
+		else if (key == GLFW_KEY_S) {
+			m_Camera->Move(0.0f, -0.03f, 0.0f);
+		}
+		else if (key == GLFW_KEY_A) {
+			m_Camera->Move(0.03f, 0.0f, 0.0f);
+		}
+		else if (key == GLFW_KEY_D) {
+			m_Camera->Move(-0.03f, 0.0f, 0.0f);
+		}
+		else if (key == GLFW_KEY_ESCAPE) {
+			ShouldClose = true;
 		}
 	}
 

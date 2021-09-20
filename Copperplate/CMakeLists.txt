@@ -7,6 +7,7 @@ set(SOURCE_LIST
 	rendering.h rendering.cpp
 	shaders/flatcolor.vert
 	shaders/flatcolor.frag
+	shaders/lines.geom
 )
 
 # Setup as an executable
@@ -19,6 +20,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE_LIST})
 target_link_libraries(Copperplate glfw)
 target_link_libraries(Copperplate glad)
 target_link_libraries(Copperplate glm)
+target_link_libraries(Copperplate assimp)
 
 # Copy the shader files to output after each build
 add_custom_command(

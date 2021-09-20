@@ -37,11 +37,14 @@ namespace Copperplate {
 
 		glm::mat4 GetViewMatrix();		
 		glm::mat4 GetProjectionMatrix();
+		glm::vec3 GetForwardVector();
 		
 	private:	
 		float m_Azimuth;
 		float m_Height;
 		float m_Zoom;
+		glm::vec3 m_Position;
+		glm::vec3 m_Forward;
 		glm::mat4 m_ViewMatrix;
 		glm::mat4 m_ProjectionMatrix;
 

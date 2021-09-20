@@ -5,6 +5,7 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/quaternion_trigonometric.hpp>
+#include <glm\gtx\string_cast.hpp>
 
 namespace Copperplate {
 
@@ -81,9 +82,25 @@ namespace Copperplate {
 	}
 
 	void Camera::CalculateViewMatrix() {
-		glm::mat4 View = glm::translate(glm::identity<glm::mat4>(), glm::vec3(0.0f, 0.0f, -m_Zoom));
-		View = glm::rotate(View, m_Azimuth, glm::vec3(0.0f, 1.0f, 0.0f));
-		View = glm::rotate(View, m_Height, glm::vec3(-1.0f, 0.0f, 0.0f));
+		if (m_Height > 1.57f) m_Height = 1.57f;
+		if (m_Height < -1.57f) m_Height = -1.57f;
+
+		float posX = sin(m_Azimuth) * cos(m_Height) * m_Zoom;
+		float posY = sin(m_Height) * m_Zoom;
+		float posZ = cos(m_Azimuth) * cos(m_Height) * m_Zoom;
+		m_Position = glm::vec3(posX, posY, posZ);
+
+		m_Forward = glm::normalize(glm::vec3(0.0f) - m_Position);
+		glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+		glm::vec3 right = glm::normalize(glm::cross(m_Forward, up));
+		up = glm::normalize(glm::cross(right, m_Forward));
+
+		glm::mat4 View = glm::mat4();
+		View[0] = glm::vec4(right.x, up.x, m_Forward.x, 0.0f);
+		View[1] = glm::vec4(right.y, up.y, m_Forward.y, 0.0f);
+		View[2] = glm::vec4(right.z, up.z, m_Forward.z, 0.0f);
+		View[3] = glm::vec4(glm::dot(right, m_Position), glm::dot(up, m_Position), glm::dot(m_Forward, m_Position), 1.0f);
+		
 		m_ViewMatrix = View;
 
 		//Testing
@@ -99,7 +116,7 @@ namespace Copperplate {
 	void Camera::SetPosition(float azimuth, float height, float zoom) {
 		m_Azimuth = azimuth;
 		m_Height = height;
-		m_Zoom = zoom;
+		m_Zoom = zoom;		
 		CalculateViewMatrix();
 	}
 
@@ -116,6 +133,10 @@ namespace Copperplate {
 
 	glm::mat4 Camera::GetProjectionMatrix() {
 		return m_ProjectionMatrix;
+	}
+
+	glm::vec3 Camera::GetForwardVector() {
+		return m_Forward;
 	}
 
 	// GLFW Callback Functions
