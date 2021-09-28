@@ -1,10 +1,13 @@
 #pragma once
 
-#include <string>
-#include <iostream>
-#include <glm/ext/matrix_float4x4.hpp>
+#include "core.h"
+
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
+#include <glm/ext/matrix_float4x4.hpp>
+
+#include <iostream>
+#include <string>
 #include <vector>
 
 namespace Copperplate {
@@ -19,9 +22,12 @@ namespace Copperplate {
 	public:	
 		//Mesh(float* verts, int numVerts, unsigned int* inds, int numInds);
 
-		void Draw(unsigned int shaderId);
+		void Draw();
 
-		void SetTransform(glm::mat4 ModelMatrix);
+		float GetTotalArea();
+
+		std::vector<Face>& GetFaces();
+
 
 	private:	
 		Mesh();
@@ -33,8 +39,6 @@ namespace Copperplate {
 
 		std::vector<float> m_VertexData;
 		std::vector<unsigned int> m_IndexData;
-
-		glm::mat4 m_ModelMatrix;
 
 		unsigned int m_VertexArrayObject;
 		unsigned int m_VertexBuffer;

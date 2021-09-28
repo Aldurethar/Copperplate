@@ -1,13 +1,13 @@
 #pragma once
 
+#include "mesh.h"
+
+#include <assimp/postprocess.h>
 #include <glad/glad.h>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <assimp/postprocess.h>
-#include <map>
-#include "mesh.h"
-#include "application.h"
 
+#include <map>
 
 namespace Copperplate {
 
@@ -33,6 +33,7 @@ namespace Copperplate {
 									6, 5, 7,
 									5, 4, 7	};
 
+	//MESHCREATOR IMPLEMENTATION
 	std::unique_ptr<Mesh> MeshCreator::CreateTestMesh() {		
 		/*
 		std::unique_ptr<Mesh> testMesh = std::make_unique<Mesh>(testVertices, 24, testIndices, 36);
@@ -128,6 +129,7 @@ namespace Copperplate {
 		return mesh;
 	}
 
+	//MESH IMPLEMENTATION
 	Mesh::Mesh() {
 		m_Vertices = std::vector<Vertex>();
 		m_Faces = std::vector<Face>();
@@ -174,8 +176,6 @@ namespace Copperplate {
 		}
 
 		// setup opengl buffers
-		m_ModelMatrix = glm::mat4(1.0f);
-
 		glGenVertexArrays(1, &m_VertexArrayObject);
 		glGenBuffers(1, &m_VertexBuffer);
 		glGenBuffers(1, &m_ElementBuffer);
@@ -196,20 +196,27 @@ namespace Copperplate {
 
 		glCheckError();
 	}
-
-
-	void Mesh::SetTransform(glm::mat4 ModelMatrix) {
-		m_ModelMatrix = ModelMatrix;
-	}
-
-	void Mesh::Draw(unsigned int shaderId) {
-		int modelLoc = glGetUniformLocation(shaderId, "model");
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(m_ModelMatrix));
-		glCheckError();
-
+	
+	void Mesh::Draw() {
 		glBindVertexArray(m_VertexArrayObject);
 		glDrawElements(GL_TRIANGLES_ADJACENCY, m_IndexData.size(), GL_UNSIGNED_INT, 0);
 	}
 
-	
+	float Mesh::GetTotalArea() {
+		float area = 0;
+		for (Face face : m_Faces) {
+			glm::vec3 a = face.outer->origin->position;
+			glm::vec3 b = face.outer->next->origin->position;
+			glm::vec3 c = face.outer->next->next->origin->position;
+
+			glm::vec3 ab = b - a;
+			glm::vec3 ac = c - a;
+			area += glm::cross(ab, ac).length() * 0.5f;
+		}
+		return area;
+	}
+
+	std::vector<Face>& Mesh::GetFaces(){
+		return m_Faces;
+	}
 }

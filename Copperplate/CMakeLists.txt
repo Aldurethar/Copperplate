@@ -1,13 +1,18 @@
 # List of all the source files, add new files here
 set(SOURCE_LIST
 	main.cpp
+	core.h core.cpp
 	application.h application.cpp
+	scene.h scene.cpp
 	mesh.h	mesh.cpp
 	shader.h shader.cpp
 	rendering.h rendering.cpp
+	hatching.h hatching.cpp
 	shaders/flatcolor.vert
 	shaders/flatcolor.frag
-	shaders/lines.geom
+	shaders/contours.vert
+	shaders/contours.geom
+	shaders/contours.frag
 )
 
 # Setup as an executable

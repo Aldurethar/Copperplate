@@ -4,7 +4,6 @@
 #include <GLFW/glfw3.h>
 #include <glm/ext/vector_float3.hpp>
 #include <glm/ext/matrix_float4x4.hpp>
-#include "application.h"
 
 namespace Copperplate {
 
@@ -18,8 +17,8 @@ namespace Copperplate {
 
 		void SwapBuffers();
 
-		float GetWidth();
-		float GetHeight();
+		int GetWidth();
+		int GetHeight();
 				
 	private:
 		GLFWwindow* m_Window;
@@ -29,11 +28,11 @@ namespace Copperplate {
 	class Camera {
 	public:
 	
-		Camera(float width, float height);
+		Camera(int width, int height);
 
 		void SetPosition(float azimuth, float height, float zoom);
 		void Move(float addAzimuth, float addHeight, float addZoom);
-		void SetViewportSize(float width, float height);
+		void SetViewportSize(int width, int height);
 
 		glm::mat4 GetViewMatrix();		
 		glm::mat4 GetProjectionMatrix();

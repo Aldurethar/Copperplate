@@ -1,8 +1,10 @@
 #pragma once
 
-#include <stdio.h>
 #include "application.h"
+
 #include <glm\gtc\type_ptr.hpp>
+
+#include <stdio.h>
 
 using namespace Copperplate;
 

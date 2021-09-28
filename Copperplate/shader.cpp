@@ -2,12 +2,13 @@
 
 #include "shader.h"
 
+#include <glad/glad.h>
+#include <glm\gtc\type_ptr.hpp>
+
 #include <string>
 #include <fstream>
 #include <sstream>
 #include <iostream>
-#include <glad/glad.h>
-#include <glm\gtc\type_ptr.hpp>
 
 
 namespace Copperplate {
@@ -189,16 +190,24 @@ namespace Copperplate {
 
 	void Shader::Use() {
 		glUseProgram(m_ProgramID);
+
+		for (const auto& [name, value] : m_UniformMats) {
+			int location = glGetUniformLocation(m_ProgramID, name.c_str());
+			glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(value));
+		}
+
+		for (const auto& [name, value] : m_UniformVecs) {
+			int location = glGetUniformLocation(m_ProgramID, name.c_str());
+			glUniform3fv(location, 1, glm::value_ptr(value));
+		}
 	}
 
 	void Shader::SetMat4(const std::string& name, const glm::mat4& value) {
-		int location = glGetUniformLocation(m_ProgramID, name.c_str());
-		glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(value));
+		m_UniformMats[name] = value;		
 	}
 
 	void Shader::SetVec3(const std::string& name, const glm::vec3& value) {
-		int location = glGetUniformLocation(m_ProgramID, name.c_str());
-		glUniform3fv(location, 1, glm::value_ptr(value));
+		m_UniformVecs[name] = value;
 	}
 
 	unsigned int Shader::GetId() {

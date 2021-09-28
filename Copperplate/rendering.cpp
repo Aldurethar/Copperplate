@@ -1,11 +1,14 @@
 #pragma once
 
 #include "rendering.h"
-#include <iostream>
+#include "application.h"
+
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/quaternion_trigonometric.hpp>
 #include <glm\gtx\string_cast.hpp>
+
+#include <iostream>
 
 namespace Copperplate {
 
@@ -56,25 +59,25 @@ namespace Copperplate {
 		glfwSwapBuffers(m_Window);
 	}
 
-	float Window::GetHeight() {
+	int Window::GetHeight() {
 		int width;
 		int height;
 		glfwGetFramebufferSize(m_Window, &width, &height);
-		return (float)height;
+		return height;
 	}
 
-	float Window::GetWidth() {
+	int Window::GetWidth() {
 		int width;
 		int height;
 		glfwGetFramebufferSize(m_Window, &width, &height);
-		return (float)width;
+		return width;
 	}
 	
 
 	// Camera Class
-	Camera::Camera(float width, float height) {
-		m_Azimuth = 0.0f;
-		m_Height = 0.0f;
+	Camera::Camera(int width, int height) {
+		m_Azimuth = 3.4f;
+		m_Height = -0.2f;
 		m_Zoom = 3.0f;
 
 		CalculateViewMatrix();
@@ -107,8 +110,8 @@ namespace Copperplate {
 		//m_ViewMatrix = glm::identity<glm::mat4>();
 	}
 
-	void Camera::SetViewportSize(float width, float height) {
-		m_ProjectionMatrix = glm::perspective(glm::radians(45.0f), width / height, 0.1f, 100.0f);
+	void Camera::SetViewportSize(int width, int height) {
+		m_ProjectionMatrix = glm::perspective(glm::radians(45.0f), (float) width / (float) height, 0.1f, 100.0f);
 		//Testing
 		//m_ProjectionMatrix = glm::identity<glm::mat4>();
 	}

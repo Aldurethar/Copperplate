@@ -1,5 +1,9 @@
+#pragma once
+
 #include <glm\ext\matrix_float4x4.hpp>
+
 #include <string>
+#include <map>
 
 namespace Copperplate {
 	class Shader {
@@ -10,10 +14,15 @@ namespace Copperplate {
 		void Use();
 		unsigned int GetId();
 
-		void SetMat4(const std::string& name, const glm::mat4 &value);
+		void SetMat4(const std::string& name, const glm::mat4& value);
 		void SetVec3(const std::string& name, const glm::vec3& value);
+
+		bool useDepthTest = true;
+		bool writeDepth = true;
 
 	private:
 		unsigned int m_ProgramID = 0;
+		std::map<std::string, glm::mat4> m_UniformMats;
+		std::map<std::string, glm::vec3> m_UniformVecs;
 	};
 }
