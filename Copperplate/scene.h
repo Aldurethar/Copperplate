@@ -15,11 +15,11 @@ namespace Copperplate {
 	class SceneObject {
 	public:
 
-		SceneObject(std::string meshFile, std::shared_ptr<Shader> shader);
+		SceneObject(std::string meshFile, Shared<Shader> shader);
 
 		void Draw();
 
-		void SetShader(std::shared_ptr<Shader> shader);
+		void SetShader(Shared<Shader> shader);
 
 		void DrawSeedPoints();
 
@@ -27,8 +27,8 @@ namespace Copperplate {
 
 		SceneObject();
 
-		std::unique_ptr<Mesh> m_Mesh;
-		std::shared_ptr<Shader> m_Shader;
+		Unique<Mesh> m_Mesh;
+		Shared<Shader> m_Shader;
 		glm::mat4 m_Transform;
 		std::vector<SeedPoint> m_SeedPoints;
 
@@ -40,7 +40,7 @@ namespace Copperplate {
 	class Scene {
 	public:
 
-		Scene(int viewportWidth, int viewportHeight);
+		Scene(Shared<Window> window);
 
 		void Draw();
 
@@ -49,9 +49,16 @@ namespace Copperplate {
 
 	private:
 
-		std::unique_ptr<Camera> m_Camera;
-		std::map<std::string, std::shared_ptr<Shader>> m_Shaders;
-		std::vector<std::unique_ptr<SceneObject>> m_SceneObjects;
+		void DrawObject(const Unique<SceneObject>& object, const std::string& shader);
+		void DrawFlatColor(const Unique<SceneObject>& object, glm::vec3 color);
+		void DrawContours(const Unique<SceneObject>& object);
+		void DrawSeedPoints(const Unique<SceneObject>& object, glm::vec3 color);
+		void DrawFramebufferContent(const std::string& framebuffer);
+
+		Unique<Renderer> m_Renderer;
+		Unique<Camera> m_Camera;
+		std::map<std::string, Shared<Shader>> m_Shaders;
+		std::vector<Unique<SceneObject>> m_SceneObjects;
 
 	};
 }

@@ -8,12 +8,12 @@ namespace Copperplate {
 
 	// Definitions so the Compiler knows where to put these Variables
 	bool Application::ShouldClose = false;
-	std::unique_ptr<Window> Application::m_Window;
-	std::unique_ptr<Scene> Application::m_Scene;
+	Shared<Window> Application::m_Window;
+	Unique<Scene> Application::m_Scene;
 
 	void Application::Init() {
-		m_Window = std::make_unique<Window>();
-		m_Scene = std::make_unique<Scene>(m_Window->GetWidth(), m_Window->GetHeight());
+		m_Window = CreateShared<Window>();
+		m_Scene = CreateUnique<Scene>(m_Window);
 
 		glClearColor(0.89f, 0.87f, 0.53f, 1.0f);
 		glEnable(GL_DEPTH_TEST);

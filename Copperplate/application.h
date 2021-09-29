@@ -22,11 +22,8 @@ namespace Copperplate {
 		static bool ShouldClose;
 
 	private:
-		static std::unique_ptr<Window> m_Window;
-		static std::unique_ptr<Scene> m_Scene;
-		/*static std::unique_ptr<Camera> m_Camera;
-		static std::unique_ptr<Shader> m_TestShader;
-		static std::unique_ptr<Mesh> m_TestMesh;*/
+		static Shared<Window> m_Window;
+		static Unique<Scene> m_Scene;
 	};
 	
 }

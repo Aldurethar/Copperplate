@@ -12,6 +12,9 @@
 
 namespace Copperplate {
 
+	const glm::vec3 IMAGE_CLEARCOLOR = glm::vec3(0.89f, 0.87f, 0.53f);
+	const glm::vec3 NORMAL_CLEARCOLOR = glm::vec3(0.0f);
+	const glm::vec3 CURVATURE_CLEARCOLOR = glm::vec3(0.0f);
 
 	// Window Class
 	Window::Window() {
@@ -47,7 +50,7 @@ namespace Copperplate {
 		glfwSetMouseButtonCallback(m_Window, GlfwMouseButtonCallback);
 		glfwSetCursorPosCallback(m_Window, GlfwMousePosCallback);
 		
-		std::cout << "Window created!";
+		std::cout << "Window created! \n";
 	}
 
 	Window::~Window() {
@@ -142,6 +145,116 @@ namespace Copperplate {
 		return m_Forward;
 	}
 
+	//Screen Quad				Pos					TexCoords
+	float ScreenQuadVerts[] = { 0.0f, 0.0f, 0.0f,	0.0f, 0.0f,
+								1.0f, 0.0f, 0.0f,	1.0f, 0.0f,
+								0.0f, 1.0f, 0.0f,	0.0f, 1.0f,
+								1.0f, 1.0f, 0.0f,	1.0f, 1.0f };
+
+	//Renderer Class
+	Renderer::Renderer(Shared<Window> window)
+	{
+		m_Window = window;
+		//Setup Screen Quad VAO
+		glGenVertexArrays(1, &m_ScreenQuadVAO);
+		unsigned int vbo;
+		glGenBuffers(1, &vbo);
+
+		glBindVertexArray(m_ScreenQuadVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBufferData(GL_ARRAY_BUFFER, 4 * 5 * sizeof(float), ScreenQuadVerts, GL_STATIC_DRAW);
+
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (GLvoid*)0);
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (GLvoid*)(3 * sizeof(GLfloat)));
+		glEnableVertexAttribArray(0);
+
+		glCheckError();
+
+		//Setup Framebuffers
+		//Default Render to Screen
+		unsigned int clearFlags = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT;
+		FrameBuffer default = { 0, 0, IMAGE_CLEARCOLOR, clearFlags };
+		m_Framebuffers["Default"] = default;
+
+		//Normal Framebuffer
+		FrameBuffer normal;
+		normal.m_ClearColor = NORMAL_CLEARCOLOR;
+		normal.m_ClearFlags = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT;
+		glGenFramebuffers(1, &normal.m_FBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, normal.m_FBO);
+		
+		glGenTextures(1, &normal.m_Texture);
+		glBindTexture(GL_TEXTURE_2D, normal.m_Texture);
+
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_Window->GetWidth(), m_Window->GetHeight(), 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, normal.m_Texture, 0);
+
+		unsigned int rbo;
+		glGenRenderbuffers(1, &rbo);
+		glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, m_Window->GetWidth(), m_Window->GetHeight());
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+		glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+		glCheckFrameBufferError();
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		m_Framebuffers["Normal"] = normal;
+
+		//Curvature Framebuffer
+		FrameBuffer curvature;
+		curvature.m_ClearColor = CURVATURE_CLEARCOLOR;
+		curvature.m_ClearFlags = GL_COLOR_BUFFER_BIT;
+		glGenFramebuffers(1, &curvature.m_FBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, curvature.m_FBO);
+
+		glGenTextures(1, &curvature.m_Texture);
+		glBindTexture(GL_TEXTURE_2D, curvature.m_Texture);
+
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_Window->GetWidth(), m_Window->GetHeight(), 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, curvature.m_Texture, 0);
+
+		glGenRenderbuffers(1, &rbo);
+		glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, m_Window->GetWidth(), m_Window->GetHeight());
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+		glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+		glCheckFrameBufferError();
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		m_Framebuffers["Curvature"] = curvature;
+
+	}
+
+	void Renderer::SwitchFrameBuffer(const std::string& name)
+	{
+		FrameBuffer& fb = m_Framebuffers[name];
+		glBindFramebuffer(GL_FRAMEBUFFER, fb.m_FBO);
+		glClearColor(fb.m_ClearColor.x, fb.m_ClearColor.y, fb.m_ClearColor.z, 1.0f);
+		glClear(fb.m_ClearFlags);
+	}
+
+	void Renderer::DrawFramebufferContent(const std::string& name)
+	{
+		unsigned int tex = m_Framebuffers[name].m_Texture;
+		glBindVertexArray(m_ScreenQuadVAO);
+		glBindTexture(GL_TEXTURE_2D, tex);
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	}
+
 	// GLFW Callback Functions
 	void GlfwErrorCallback(int error, const char* description) {
 		std::cerr << "GLFW Error:" << error << description;
@@ -160,11 +273,11 @@ namespace Copperplate {
 	}
 
 	void GlfwMouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
-		//TODO: Fill this
+		//Currently not in Use
 	}
 
 	void GlfwMousePosCallback(GLFWwindow* window, double xPos, double yPos) {
-		//TODO: Fill this
+		//Currently not in Use
 	}
 
 }

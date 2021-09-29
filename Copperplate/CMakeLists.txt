@@ -13,6 +13,10 @@ set(SOURCE_LIST
 	shaders/contours.vert
 	shaders/contours.geom
 	shaders/contours.frag
+	shaders/displaytex.vert
+	shaders/displaytex.frag
+	shaders/normals.vert
+	shaders/normals.frag
 )
 
 # Setup as an executable

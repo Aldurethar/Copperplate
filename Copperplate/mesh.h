@@ -21,6 +21,7 @@ namespace Copperplate {
 		friend class MeshCreator;
 	public:	
 		//Mesh(float* verts, int numVerts, unsigned int* inds, int numInds);
+		Mesh();
 
 		void Draw();
 
@@ -28,9 +29,10 @@ namespace Copperplate {
 
 		std::vector<Face>& GetFaces();
 
+		
 
 	private:	
-		Mesh();
+		
 		void Initialize();
 
 		std::vector<Vertex> m_Vertices;
@@ -47,8 +49,8 @@ namespace Copperplate {
 
 	class MeshCreator {
 	public:
-		static std::unique_ptr<Mesh> CreateTestMesh();
-		static std::unique_ptr<Mesh> ImportMesh(const std::string& fileName);
+		static Unique<Mesh> CreateTestMesh();
+		static Unique<Mesh> ImportMesh(const std::string& fileName);
 
 	private:
 

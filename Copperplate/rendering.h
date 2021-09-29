@@ -1,13 +1,16 @@
 #pragma once
 
+#include "core.h"
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/ext/vector_float3.hpp>
 #include <glm/ext/matrix_float4x4.hpp>
 
-namespace Copperplate {
+#include <map>
+#include <string>
 
-	//forward declarations
+namespace Copperplate {	
 
 	// WINDOW CLASS
 	class Window {
@@ -49,6 +52,34 @@ namespace Copperplate {
 
 		void CalculateViewMatrix();
 	
+	};
+
+	struct FrameBuffer {
+		unsigned int m_FBO;
+		unsigned int m_Texture;
+		glm::vec3 m_ClearColor;
+		unsigned int m_ClearFlags;
+	};
+
+	//RENDERER CLASS
+	class Renderer {
+	public:
+
+		Renderer(Shared<Window> window);
+
+		void SwitchFrameBuffer(const std::string& name);
+
+		void DrawFramebufferContent(const std::string& name);
+
+
+	private:
+
+		Shared<Window> m_Window;
+
+		std::map<std::string, FrameBuffer> m_Framebuffers;
+
+		unsigned int m_ScreenQuadVAO;
+
 	};
 
 	// Callback Functions for the window

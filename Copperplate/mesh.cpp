@@ -34,7 +34,7 @@ namespace Copperplate {
 									5, 4, 7	};
 
 	//MESHCREATOR IMPLEMENTATION
-	std::unique_ptr<Mesh> MeshCreator::CreateTestMesh() {		
+	Unique<Mesh> MeshCreator::CreateTestMesh() {		
 		/*
 		std::unique_ptr<Mesh> testMesh = std::make_unique<Mesh>(testVertices, 24, testIndices, 36);
 		glm::mat4 model = glm::mat4(1.0f);
@@ -48,7 +48,7 @@ namespace Copperplate {
 		return nullptr;
 	}
 
-	std::unique_ptr<Mesh> MeshCreator::ImportMesh(const std::string& fileName) {
+	Unique<Mesh> MeshCreator::ImportMesh(const std::string& fileName) {
 		Assimp::Importer importer;
 
 		const aiScene* scene = importer.ReadFile(fileName, 
@@ -62,8 +62,7 @@ namespace Copperplate {
 			return nullptr;
 		}
 
-		//std::unique_ptr<Mesh> mesh = std::make_unique<Mesh>();
-		std::unique_ptr<Mesh> mesh = std::unique_ptr<Mesh>(new Mesh());
+		Unique<Mesh> mesh = CreateUnique<Mesh>();
 
 		aiMesh* importedMesh = scene->mMeshes[0];
 		std::cout << "Importing Mesh with " << importedMesh->mNumVertices << " Verts and " << importedMesh->mNumFaces << " Faces";
@@ -122,9 +121,6 @@ namespace Copperplate {
 		}
 		
 		mesh->Initialize();
-		
-		//std::unique_ptr<Mesh> mesh = std::make_unique<Mesh>(vertexData.data(), numVerts * 3, indexData.data(), numFaces * 3);
-
 
 		return mesh;
 	}

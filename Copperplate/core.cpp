@@ -24,4 +24,26 @@ namespace Copperplate {
 		}
 		return errorCode;
 	}
+
+	GLenum glCheckFrameBufferError_(const char* file, int line)
+	{
+		GLenum errorCode;
+		while ((errorCode = glCheckFramebufferStatus(GL_FRAMEBUFFER)) != GL_FRAMEBUFFER_COMPLETE)
+		{
+			std::string error;
+			switch (errorCode)
+			{
+			case GL_FRAMEBUFFER_UNDEFINED:						error = "FRAMEBUFFER_UNDEFINED"; break;
+			case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:          error = "FRAMEBUFFER_INCOMPLETE_ATTACHMENT"; break;
+			case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:  error = "FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT"; break;
+			case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:         error = "FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER"; break;
+			case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:         error = "FRAMEBUFFER_INCOMPLETE_READ_BUFFER"; break;
+			case GL_FRAMEBUFFER_UNSUPPORTED:					error = "FRAMEBUFFER_UNSUPPORTED"; break;
+			case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:			error = "FRAMEBUFFER_INCOMPLETE_MULTISAMPLE"; break;
+			case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:		error = "FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS"; break;
+			}
+			std::cout << error << " | " << file << " (" << line << ")" << std::endl;
+		}
+		return errorCode;
+	}
 }
