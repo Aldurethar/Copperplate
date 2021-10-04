@@ -16,6 +16,7 @@ namespace Copperplate {
 
 		void SetMat4(const std::string& name, const glm::mat4& value);
 		void SetVec3(const std::string& name, const glm::vec3& value);
+		void SetFloat(const std::string& name, const float value);
 
 		bool useDepthTest = true;
 		bool writeDepth = true;
@@ -24,5 +25,6 @@ namespace Copperplate {
 		unsigned int m_ProgramID = 0;
 		std::map<std::string, glm::mat4> m_UniformMats;
 		std::map<std::string, glm::vec3> m_UniformVecs;
+		std::map<std::string, float> m_UniformFloats;
 	};
 }

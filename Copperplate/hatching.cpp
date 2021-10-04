@@ -22,6 +22,8 @@ namespace Copperplate {
 		std::mt19937 engine(rd());
 		std::uniform_real_distribution<> dist(0.0, 1.0);
 
+		HaltonSequence halton(3);
+
 		float totalArea = mesh.GetTotalArea();
 		float pointsFrac = (float)totalPoints / (float)maxPointsPerFace;
 		std::vector<Face>& faces = mesh.GetFaces();
@@ -43,12 +45,41 @@ namespace Copperplate {
 					b /= sum;
 					c /= sum;
 					glm::vec3 pos = (a * v1) + (b * v2) + (c * v3);
-					SeedPoint sp = { pos, face };
+					float importance = halton.NextNumber();
+					SeedPoint sp = { pos, face, importance };
 					outSeedPoints.push_back(sp);
 				}
 			}
 		}
 	}
 
-	
+	HaltonSequence::HaltonSequence(int base) {
+		m_Base = base;
+		m_Numerator = 0;
+		m_Denominator = 1;
+	}
+
+	void HaltonSequence::Skip(int amount) {
+		for (int i = 0; i < amount; i++) {
+			this->NextNumber();
+		}
+	}
+
+	float HaltonSequence::NextNumber() {
+		//Algorithm taken from https://en.wikipedia.org/wiki/Halton_sequence
+		int x = m_Denominator - m_Numerator;
+		if (x == 1) {
+			m_Numerator = 1;
+			m_Denominator *= m_Base;
+		}
+		else {
+			int y = m_Denominator / m_Base;
+			while (x <= y) {
+				y /= m_Base;
+			}
+			m_Numerator = (m_Base + 1) * y - x;
+		}
+		return (float)m_Numerator / (float)m_Denominator;
+	}
+
 }

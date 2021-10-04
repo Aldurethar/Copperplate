@@ -57,8 +57,14 @@ namespace Copperplate {
 	struct FrameBuffer {
 		unsigned int m_FBO;
 		unsigned int m_Texture;
-		glm::vec3 m_ClearColor;
+		glm::vec4 m_ClearColor;
 		unsigned int m_ClearFlags;
+	};
+
+	enum EFramebuffers {
+		FB_Default,
+		FB_Normals,
+		FB_Curvature
 	};
 
 	//RENDERER CLASS
@@ -67,16 +73,18 @@ namespace Copperplate {
 
 		Renderer(Shared<Window> window);
 
-		void SwitchFrameBuffer(const std::string& name);
+		void SwitchFrameBuffer(EFramebuffers framebuffer, bool clear);
 
-		void DrawFramebufferContent(const std::string& name);
+		void UseFrameBufferTexture(EFramebuffers framebuffer);
+
+		void DrawFramebufferContent(EFramebuffers framebuffer);
 
 
 	private:
 
 		Shared<Window> m_Window;
 
-		std::map<std::string, FrameBuffer> m_Framebuffers;
+		std::map<EFramebuffers, FrameBuffer> m_Framebuffers;
 
 		unsigned int m_ScreenQuadVAO;
 

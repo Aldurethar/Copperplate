@@ -200,6 +200,11 @@ namespace Copperplate {
 			int location = glGetUniformLocation(m_ProgramID, name.c_str());
 			glUniform3fv(location, 1, glm::value_ptr(value));
 		}
+
+		for (const auto& [name, value] : m_UniformFloats) {
+			int location = glGetUniformLocation(m_ProgramID, name.c_str());
+			glUniform1f(location, value);
+		}
 	}
 
 	void Shader::SetMat4(const std::string& name, const glm::mat4& value) {
@@ -208,6 +213,11 @@ namespace Copperplate {
 
 	void Shader::SetVec3(const std::string& name, const glm::vec3& value) {
 		m_UniformVecs[name] = value;
+	}
+
+	void Shader::SetFloat(const std::string& name, const float value)
+	{
+		m_UniformFloats[name] = value;
 	}
 
 	unsigned int Shader::GetId() {

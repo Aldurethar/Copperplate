@@ -12,9 +12,9 @@
 
 namespace Copperplate {
 
-	const glm::vec3 IMAGE_CLEARCOLOR = glm::vec3(0.89f, 0.87f, 0.53f);
-	const glm::vec3 NORMAL_CLEARCOLOR = glm::vec3(0.0f);
-	const glm::vec3 CURVATURE_CLEARCOLOR = glm::vec3(0.0f);
+	const glm::vec4 IMAGE_CLEARCOLOR = glm::vec4(0.89f, 0.87f, 0.53f, 1.0f);
+	const glm::vec4 NORMAL_CLEARCOLOR = glm::vec4(0.0f);
+	const glm::vec4 CURVATURE_CLEARCOLOR = glm::vec4(0.0f);
 
 	// Window Class
 	Window::Window() {
@@ -145,11 +145,11 @@ namespace Copperplate {
 		return m_Forward;
 	}
 
-	//Screen Quad				Pos					TexCoords
-	float ScreenQuadVerts[] = { 0.0f, 0.0f, 0.0f,	0.0f, 0.0f,
-								1.0f, 0.0f, 0.0f,	1.0f, 0.0f,
-								0.0f, 1.0f, 0.0f,	0.0f, 1.0f,
-								1.0f, 1.0f, 0.0f,	1.0f, 1.0f };
+	//Screen Quad				 Pos				TexCoords
+	float ScreenQuadVerts[] = { -1.0f, -1.0f, 0.0f,	0.0f, 0.0f,
+								 1.0f, -1.0f, 0.0f,	1.0f, 0.0f,
+								-1.0f,  1.0f, 0.0f,	0.0f, 1.0f,
+								 1.0f,  1.0f, 0.0f,	1.0f, 1.0f };
 
 	//Renderer Class
 	Renderer::Renderer(Shared<Window> window)
@@ -176,7 +176,7 @@ namespace Copperplate {
 		//Default Render to Screen
 		unsigned int clearFlags = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT;
 		FrameBuffer default = { 0, 0, IMAGE_CLEARCOLOR, clearFlags };
-		m_Framebuffers["Default"] = default;
+		m_Framebuffers[FB_Default] = default;
 
 		//Normal Framebuffer
 		FrameBuffer normal;
@@ -188,7 +188,7 @@ namespace Copperplate {
 		glGenTextures(1, &normal.m_Texture);
 		glBindTexture(GL_TEXTURE_2D, normal.m_Texture);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_Window->GetWidth(), m_Window->GetHeight(), 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_Window->GetWidth(), m_Window->GetHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glBindTexture(GL_TEXTURE_2D, 0);
@@ -206,7 +206,7 @@ namespace Copperplate {
 		glCheckFrameBufferError();
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		m_Framebuffers["Normal"] = normal;
+		m_Framebuffers[FB_Normals] = normal;
 
 		//Curvature Framebuffer
 		FrameBuffer curvature;
@@ -218,7 +218,7 @@ namespace Copperplate {
 		glGenTextures(1, &curvature.m_Texture);
 		glBindTexture(GL_TEXTURE_2D, curvature.m_Texture);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_Window->GetWidth(), m_Window->GetHeight(), 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_Window->GetWidth(), m_Window->GetHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glBindTexture(GL_TEXTURE_2D, 0);
@@ -235,21 +235,28 @@ namespace Copperplate {
 		glCheckFrameBufferError();
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		m_Framebuffers["Curvature"] = curvature;
+		m_Framebuffers[FB_Curvature] = curvature;
 
 	}
 
-	void Renderer::SwitchFrameBuffer(const std::string& name)
+	void Renderer::SwitchFrameBuffer(EFramebuffers framebuffer, bool clear)
 	{
-		FrameBuffer& fb = m_Framebuffers[name];
+		FrameBuffer& fb = m_Framebuffers[framebuffer];
 		glBindFramebuffer(GL_FRAMEBUFFER, fb.m_FBO);
-		glClearColor(fb.m_ClearColor.x, fb.m_ClearColor.y, fb.m_ClearColor.z, 1.0f);
-		glClear(fb.m_ClearFlags);
+		if (clear) {
+			glClearColor(fb.m_ClearColor.x, fb.m_ClearColor.y, fb.m_ClearColor.z, fb.m_ClearColor.w);
+			glClear(fb.m_ClearFlags);
+		}
 	}
 
-	void Renderer::DrawFramebufferContent(const std::string& name)
+	void Renderer::UseFrameBufferTexture(EFramebuffers framebuffer) {
+		unsigned int tex = m_Framebuffers[framebuffer].m_Texture;
+		glBindTexture(GL_TEXTURE_2D, tex);
+	}
+
+	void Renderer::DrawFramebufferContent(EFramebuffers framebuffer)
 	{
-		unsigned int tex = m_Framebuffers[name].m_Texture;
+		unsigned int tex = m_Framebuffers[framebuffer].m_Texture;
 		glBindVertexArray(m_ScreenQuadVAO);
 		glBindTexture(GL_TEXTURE_2D, tex);
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);

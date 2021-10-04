@@ -15,8 +15,12 @@ set(SOURCE_LIST
 	shaders/contours.frag
 	shaders/displaytex.vert
 	shaders/displaytex.frag
+	shaders/displaytexalpha.vert
+	shaders/displaytexalpha.frag
 	shaders/normals.vert
 	shaders/normals.frag
+	shaders/curvature.vert
+	shaders/curvature.frag
 )
 
 # Setup as an executable

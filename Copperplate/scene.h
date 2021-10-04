@@ -10,7 +10,7 @@
 namespace Copperplate {
 
 	const int SEEDS_PER_OBJECT = 5000;
-	const int MAX_SEEDS_PER_FACE = 10;
+	const int MAX_SEEDS_PER_FACE = 20;
 	
 	class SceneObject {
 	public:
@@ -22,6 +22,8 @@ namespace Copperplate {
 		void SetShader(Shared<Shader> shader);
 
 		void DrawSeedPoints();
+
+		void Move(glm::vec3 translation);
 
 	private:
 
@@ -36,6 +38,15 @@ namespace Copperplate {
 		unsigned int m_SeedsVertexBuffer;
 
 	};
+	
+	enum EShaders {
+		SH_Flatcolor,
+		SH_Contours,
+		SH_DisplayTex,
+		SH_DisplayTexAlpha,
+		SH_Normals,
+		SH_Curvature
+	};
 
 	class Scene {
 	public:
@@ -49,15 +60,17 @@ namespace Copperplate {
 
 	private:
 
-		void DrawObject(const Unique<SceneObject>& object, const std::string& shader);
+		void DrawObject(const Unique<SceneObject>& object, EShaders shader);
 		void DrawFlatColor(const Unique<SceneObject>& object, glm::vec3 color);
 		void DrawContours(const Unique<SceneObject>& object);
 		void DrawSeedPoints(const Unique<SceneObject>& object, glm::vec3 color);
-		void DrawFramebufferContent(const std::string& framebuffer);
+		void DrawFramebufferContent(EFramebuffers framebuffer);
+		void DrawFramebufferAlpha(EFramebuffers framebuffer);
+		void DrawFullScreen(EShaders shader, EFramebuffers sourceTex);
 
 		Unique<Renderer> m_Renderer;
 		Unique<Camera> m_Camera;
-		std::map<std::string, Shared<Shader>> m_Shaders;
+		std::map<EShaders, Shared<Shader>> m_Shaders;
 		std::vector<Unique<SceneObject>> m_SceneObjects;
 
 	};
