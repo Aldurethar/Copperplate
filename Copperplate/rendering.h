@@ -64,6 +64,7 @@ namespace Copperplate {
 	enum EFramebuffers {
 		FB_Default,
 		FB_Normals,
+		FB_Depth,
 		FB_Curvature
 	};
 

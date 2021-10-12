@@ -1,0 +1,61 @@
+#version 460 core
+struct inputSeed{
+	vec3 pos;
+	float importance;
+};
+
+struct outputSeed{
+	vec2 pos;
+	float importance;
+	int keep;
+};
+
+layout(std140, binding = 0) buffer seedsIn {
+	inputSeed iSeeds[];
+};
+
+layout(std140, binding = 1) buffer seedsOut {
+	outputSeed oSeeds[];
+};
+
+layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+const float eps = 1e-6;
+
+uniform sampler2D Depth;
+
+uniform float numSeeds;
+
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
+
+void main(){
+	uint gid = gl_GlobalInvocationID.x;
+
+	if (gid < numSeeds){
+		vec4 viewPos = view * model * vec4(iSeeds[gid].pos, 1.0);
+		vec4 screenPos = projection * viewPos;
+		vec2 outPos = screenPos.xy / screenPos.w;
+		int inbounds = 1;
+		if(outPos.x < -1.0 || outPos.x > 1.0) inbounds = 0;
+		if(outPos.y < -1.0 || outPos.y > 1.0) inbounds = 0;
+
+		float depth = screenPos.z * 0.5 + 0.5;
+
+		vec2 samplePos = (outPos * 0.5) + vec2(0.5);
+		float testDepth = texture(Depth, samplePos).r;
+		int keep;
+		if (depth <= testDepth) keep = 1;
+		else keep = 0;
+		//keep = 1;
+
+		oSeeds[gid].pos = outPos;
+		oSeeds[gid].importance = iSeeds[gid].importance;
+		oSeeds[gid].keep = keep * inbounds;
+	} else {
+		oSeeds[gid].pos = vec2(0.0);
+		oSeeds[gid].importance = 0.0;
+		oSeeds[gid].keep = 0;
+	}
+}

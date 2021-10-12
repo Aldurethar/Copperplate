@@ -5,8 +5,8 @@ layout(location = 1) in vec3 aNorm;
 out vec3 Norm;
 out float Depth;
 
-const float zMin = 0.1;
-const float zMax = 10.0;
+uniform float zMin;
+uniform float zMax;
 
 uniform mat4 model;
 uniform mat4 view;
@@ -19,9 +19,12 @@ uniform mat4 viewInvTrans;
 void main(){
 	Norm = normalize((viewInvTrans * modelInvTrans * vec4(aNorm, 0.0)).xyz);
 	vec4 viewPos = view * model * vec4(aPos, 1.0);
-	float dep = clamp(-viewPos.z, zMin, zMax);
-	Depth = (dep - zMin) / (zMax - zMin);	
-	gl_Position = projection * viewPos;
+	vec4 screenPos = projection * viewPos;
+	float dep = screenPos.z * 0.5 + 0.5;
+	Depth = dep;
+	//float dep = clamp(-viewPos.z, zMin, zMax);
+	//Depth = (dep - zMin) / (zMax - zMin);	
+	gl_Position = screenPos;
 	
 	//gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
 }

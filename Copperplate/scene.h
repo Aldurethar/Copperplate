@@ -11,6 +11,9 @@ namespace Copperplate {
 
 	const int SEEDS_PER_OBJECT = 5000;
 	const int MAX_SEEDS_PER_FACE = 20;
+	const float Z_MIN = 0.1f;
+	const float Z_MAX = 50.0f;
+	const int COMPUTE_GROUPSIZE = 128;
 	
 	class SceneObject {
 	public:
@@ -23,6 +26,10 @@ namespace Copperplate {
 
 		void DrawSeedPoints();
 
+		void TransformSeedPoints(Shared<ComputeShader> shader);
+
+		void DrawScreenSeeds();
+
 		void Move(glm::vec3 translation);
 
 	private:
@@ -33,9 +40,13 @@ namespace Copperplate {
 		Shared<Shader> m_Shader;
 		glm::mat4 m_Transform;
 		std::vector<SeedPoint> m_SeedPoints;
+		std::vector<ScreenSpaceSeed> m_ScreenSpaceSeeds;
 
 		unsigned int m_SeedsVAO;
 		unsigned int m_SeedsVertexBuffer;
+		unsigned int m_SeedsSSBO;
+		unsigned int m_ScreenSeedsVAO;
+		unsigned int m_ScreenSeedsVBO;
 
 	};
 	
@@ -45,7 +56,10 @@ namespace Copperplate {
 		SH_DisplayTex,
 		SH_DisplayTexAlpha,
 		SH_Normals,
-		SH_Curvature
+		SH_Depth,
+		SH_Curvature,
+		SH_TransformSeeds,
+		SH_Screenpoints,
 	};
 
 	class Scene {
@@ -60,10 +74,15 @@ namespace Copperplate {
 
 	private:
 
+		void CreateShaders();
+		void UpdateUniforms();
+
 		void DrawObject(const Unique<SceneObject>& object, EShaders shader);
 		void DrawFlatColor(const Unique<SceneObject>& object, glm::vec3 color);
 		void DrawContours(const Unique<SceneObject>& object);
-		void DrawSeedPoints(const Unique<SceneObject>& object, glm::vec3 color);
+		void DrawSeedPoints(const Unique<SceneObject>& object, glm::vec3 color, float pointSize);
+		void TransformSeedPoints(const Unique<SceneObject>& object);
+		void DrawScreenSeeds(const Unique<SceneObject>& object, glm::vec3 color, float pointSize);
 		void DrawFramebufferContent(EFramebuffers framebuffer);
 		void DrawFramebufferAlpha(EFramebuffers framebuffer);
 		void DrawFullScreen(EShaders shader, EFramebuffers sourceTex);
@@ -71,6 +90,7 @@ namespace Copperplate {
 		Unique<Renderer> m_Renderer;
 		Unique<Camera> m_Camera;
 		std::map<EShaders, Shared<Shader>> m_Shaders;
+		std::map<EShaders, Shared<ComputeShader>> m_ComputeShaders;
 		std::vector<Unique<SceneObject>> m_SceneObjects;
 
 	};

@@ -9,6 +9,11 @@ namespace Copperplate {
 		Face& m_Face;
 		float m_Importance;
 	};
+
+	struct ScreenSpaceSeed {
+		glm::vec2 m_Pos;
+		float m_Importance;
+	};
 	
 	void CreateSeedPoints(std::vector<SeedPoint>& outSeedPoints, Mesh& mesh, int totalPoints, int maxPointsPerFace);
 

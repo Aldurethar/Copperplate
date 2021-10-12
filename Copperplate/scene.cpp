@@ -5,6 +5,12 @@
 
 namespace Copperplate {
 
+	struct OutputSeed {
+		glm::vec2 pos;
+		float importance;
+		int keep;
+	};
+
 	//SCENEOBJECT IMPLEMENTATION
 	SceneObject::SceneObject(std::string meshFile, Shared<Shader> shader) {
 		m_Mesh = MeshCreator::ImportMesh(meshFile);
@@ -16,12 +22,16 @@ namespace Copperplate {
 		m_SeedPoints.reserve(SEEDS_PER_OBJECT);
 		CreateSeedPoints(m_SeedPoints, *m_Mesh, SEEDS_PER_OBJECT, MAX_SEEDS_PER_FACE);
 
+		m_ScreenSpaceSeeds = std::vector<ScreenSpaceSeed>();
+		m_ScreenSpaceSeeds.reserve(m_SeedPoints.size());
+
 		std::vector<float> seedsData;
-		seedsData.reserve(3 * m_SeedPoints.size());
+		seedsData.reserve(4 * m_SeedPoints.size());
 		for (SeedPoint sp : m_SeedPoints) {
 			seedsData.push_back(sp.m_Pos.x);
 			seedsData.push_back(sp.m_Pos.y);
 			seedsData.push_back(sp.m_Pos.z);
+			seedsData.push_back(sp.m_Importance);
 		}
 
 		//Setup OpenGL Buffers
@@ -32,8 +42,32 @@ namespace Copperplate {
 		glBindBuffer(GL_ARRAY_BUFFER, m_SeedsVertexBuffer);
 		glBufferData(GL_ARRAY_BUFFER, seedsData.size() * sizeof(float), seedsData.data(), GL_STATIC_DRAW);
 
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (GLvoid*)0);
 		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (GLvoid*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (GLvoid*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(0);
+
+		glCheckError();
+
+		//SSBO for Compute Shader output
+		int numOutputs = (((m_SeedPoints.size() - 1) / COMPUTE_GROUPSIZE) + 1) * COMPUTE_GROUPSIZE;
+		
+		glGenBuffers(1, &m_SeedsSSBO);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_SeedsSSBO);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, numOutputs * sizeof(struct OutputSeed), NULL, GL_STREAM_READ);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+		//Screen Space Seed Points
+		glGenVertexArrays(1, &m_ScreenSeedsVAO);
+		glGenBuffers(1, &m_ScreenSeedsVBO);
+
+		glBindVertexArray(m_ScreenSeedsVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, m_ScreenSeedsVBO);
+		glBufferData(GL_ARRAY_BUFFER, m_SeedPoints.size() * 3 * sizeof(float), NULL, GL_STREAM_DRAW);
+
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (GLvoid*)0);
 
 		glCheckError();
 	}
@@ -58,6 +92,41 @@ namespace Copperplate {
 		glDrawArrays(GL_POINTS, 0, m_SeedPoints.size());
 	}
 
+	void SceneObject::TransformSeedPoints(Shared<ComputeShader> shader) {		
+		shader->SetMat4("model", m_Transform);
+		shader->SetFloat("numSeeds", (float)m_SeedPoints.size());
+		shader->UpdateUniforms();
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, m_SeedsVertexBuffer);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, m_SeedsSSBO);
+
+		int numGroups = ((m_SeedPoints.size() - 1) / COMPUTE_GROUPSIZE) + 1;
+		shader->Dispatch(numGroups, 1, 1);
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+		int numOutputs = m_SeedPoints.size();
+		OutputSeed* outputs{ new OutputSeed[numOutputs]{} };
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_SeedsSSBO);
+		glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, numOutputs * sizeof(struct OutputSeed), outputs);
+		
+		m_ScreenSpaceSeeds.clear();
+		for (int i = 0; i < numOutputs; i++) {
+			if (outputs[i].keep) {
+				ScreenSpaceSeed seed = { outputs[i].pos, outputs[i].importance };
+				m_ScreenSpaceSeeds.push_back(seed);
+			}
+		}
+		delete[] outputs;
+		//std::cout << m_ScreenSpaceSeeds.size() << "Screen Space Seeds \n";
+	}
+
+	void SceneObject::DrawScreenSeeds()	{
+		m_Shader->Use();
+		glBindVertexArray(m_ScreenSeedsVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, m_ScreenSeedsVBO);
+		glBufferData(GL_ARRAY_BUFFER, m_SeedPoints.size() * 3 * sizeof(float), m_ScreenSpaceSeeds.data(), GL_STREAM_DRAW);
+		glDrawArrays(GL_POINTS, 0, m_ScreenSpaceSeeds.size());
+	}
+
 	void SceneObject::Move(glm::vec3 translation)
 	{
 		m_Transform[3] += glm::vec4(translation, 0.0f);
@@ -69,34 +138,95 @@ namespace Copperplate {
 		m_Renderer = CreateUnique<Renderer>(window);
 
 		//Setup the shaders
-		Shared<Shader> flatColor = CreateShared<Shader>("shaders/flatcolor.vert", "shaders/flatcolor.frag");
-		m_Shaders[SH_Flatcolor] = flatColor;
-
-		Shared<Shader> contours = CreateShared<Shader>("shaders/contours.vert", "shaders/contours.geom", "shaders/contours.frag");
-		m_Shaders[SH_Contours] = contours;
-
-		Shared<Shader> displayTex = CreateShared<Shader>("shaders/displaytex.vert", "shaders/displaytex.frag");
-		m_Shaders[SH_DisplayTex] = displayTex;
-
-		Shared<Shader> displayTexAlpha = CreateShared<Shader>("shaders/displaytexalpha.vert", "shaders/displaytexalpha.frag");
-		m_Shaders[SH_DisplayTexAlpha] = displayTexAlpha;
-
-		Shared<Shader> normals = CreateShared<Shader>("shaders/normals.vert", "shaders/normals.frag");
-		m_Shaders[SH_Normals] = normals;
-
-		Shared<Shader> curvature = CreateShared<Shader>("shaders/curvature.vert", "shaders/curvature.frag");
-		m_Shaders[SH_Curvature] = curvature;
-
+		m_Shaders = std::map<EShaders, Shared<Shader>>();
+		m_ComputeShaders = std::map<EShaders, Shared<ComputeShader>>();
+		CreateShaders();
+		
 		//Create the Scene Objects
 		m_SceneObjects = std::vector<Unique<SceneObject>>();
 		m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSmooth.obj", m_Shaders[SH_Contours]));
 		m_SceneObjects[0]->Move(glm::vec3(3.0f, 0.0f, 0.0f));
-		m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSubdiv.obj", m_Shaders[SH_Contours]));
+		m_SceneObjects.push_back(CreateUnique<SceneObject>("Sphere.obj", m_Shaders[SH_Contours]));
 
 	}
 
 	void Scene::Draw() {
 		//Update Shader Uniforms
+		UpdateUniforms();
+
+		//Fill Framebuffers
+		//Normals
+		m_Renderer->SwitchFrameBuffer(FB_Normals, true);
+		glCheckError();
+		for (auto& object : m_SceneObjects) {
+			DrawObject(object, SH_Normals);
+		}
+
+		//Depth
+		m_Renderer->SwitchFrameBuffer(FB_Depth, true); 
+		glCheckError();
+		for (auto& object : m_SceneObjects) {
+			DrawObject(object, SH_Depth);
+		}
+
+		//Curvature
+		m_Renderer->SwitchFrameBuffer(FB_Curvature, true);
+		glCheckError();
+		DrawFullScreen(SH_Curvature, FB_Normals);
+
+		//Draw the Objects
+		m_Renderer->SwitchFrameBuffer(FB_Default, true);
+		glCheckError();
+		for (auto& object : m_SceneObjects) {			
+			DrawFlatColor(object, glm::vec3(1.0f));
+			DrawContours(object);
+			DrawSeedPoints(object, glm::vec3(0.89f, 0.37f, 0.27f), 8.0f);
+			TransformSeedPoints(object);
+			DrawScreenSeeds(object, glm::vec3(0.13f, 0.67f, 0.27f), 4.0f); 
+		}
+		
+		m_Renderer->SwitchFrameBuffer(FB_Default, false);
+		DrawFramebufferContent(FB_Curvature);
+	}
+
+	void Scene::MoveCamera(float x, float y, float z) {
+		m_Camera->Move(x, y, z);
+	}
+
+	void Scene::ViewportSizeChanged(int newWidth, int newHeight) {
+		m_Camera->SetViewportSize(newWidth, newHeight);
+	}
+
+	void Scene::CreateShaders() {
+		Shared<Shader> flatColor = CreateShared<Shader>(ST_VertFrag, "shaders/flatcolor.vert", nullptr, "shaders/flatcolor.frag");
+		m_Shaders[SH_Flatcolor] = flatColor;
+
+		Shared<Shader> contours = CreateShared<Shader>(ST_VertGeomFrag, "shaders/contours.vert", "shaders/contours.geom", "shaders/contours.frag");
+		m_Shaders[SH_Contours] = contours;
+
+		Shared<Shader> displayTex = CreateShared<Shader>(ST_VertFrag, "shaders/displaytex.vert", nullptr, "shaders/displaytex.frag");
+		m_Shaders[SH_DisplayTex] = displayTex;
+
+		Shared<Shader> displayTexAlpha = CreateShared<Shader>(ST_VertFrag, "shaders/displaytexalpha.vert", nullptr, "shaders/displaytexalpha.frag");
+		m_Shaders[SH_DisplayTexAlpha] = displayTexAlpha;
+
+		Shared<Shader> normals = CreateShared<Shader>(ST_VertFrag, "shaders/normals.vert", nullptr, "shaders/normals.frag");
+		m_Shaders[SH_Normals] = normals;
+
+		Shared<Shader> depth = CreateShared<Shader>(ST_VertFrag, "shaders/depth.vert", nullptr, "shaders/depth.frag");
+		m_Shaders[SH_Depth] = depth;
+
+		Shared<Shader> curvature = CreateShared<Shader>(ST_VertFrag, "shaders/curvature.vert", nullptr, "shaders/curvature.frag");
+		m_Shaders[SH_Curvature] = curvature;
+
+		Shared<ComputeShader> transformSeeds = CreateShared<ComputeShader>("shaders/transformseeds.comp");
+		m_ComputeShaders[SH_TransformSeeds] = transformSeeds;
+
+		Shared<Shader> screenPoints = CreateShared<Shader>(ST_VertFrag, "shaders/screenpoints.vert", nullptr, "shaders/screenpoints.frag");
+		m_Shaders[SH_Screenpoints] = screenPoints;
+	}
+
+	void Scene::UpdateUniforms() {
 		m_Shaders[SH_Flatcolor]->SetMat4("view", m_Camera->GetViewMatrix());
 		m_Shaders[SH_Flatcolor]->SetMat4("projection", m_Camera->GetProjectionMatrix());
 		m_Shaders[SH_Contours]->SetMat4("view", m_Camera->GetViewMatrix());
@@ -105,37 +235,14 @@ namespace Copperplate {
 		m_Shaders[SH_Normals]->SetMat4("view", m_Camera->GetViewMatrix());
 		m_Shaders[SH_Normals]->SetMat4("viewInvTrans", glm::transpose(glm::inverse(m_Camera->GetViewMatrix())));
 		m_Shaders[SH_Normals]->SetMat4("projection", m_Camera->GetProjectionMatrix());
+		m_Shaders[SH_Normals]->SetFloat("zMin", Z_MIN);
+		m_Shaders[SH_Normals]->SetFloat("zMax", Z_MAX);
+		m_Shaders[SH_Depth]->SetMat4("view", m_Camera->GetViewMatrix());
+		m_Shaders[SH_Depth]->SetMat4("projection", m_Camera->GetProjectionMatrix());
 		m_Shaders[SH_Curvature]->SetFloat("sigma", 5.0f);
+		m_ComputeShaders[SH_TransformSeeds]->SetMat4("view", m_Camera->GetViewMatrix());
+		m_ComputeShaders[SH_TransformSeeds]->SetMat4("projection", m_Camera->GetProjectionMatrix());
 		glCheckError();
-
-		//Draw the Objects
-		m_Renderer->SwitchFrameBuffer(FB_Normals, true);
-		m_Renderer->SwitchFrameBuffer(FB_Default, true);
-		for (auto& object : m_SceneObjects) {
-			m_Renderer->SwitchFrameBuffer(FB_Normals, false);
-			DrawObject(object, SH_Normals);			
-
-			m_Renderer->SwitchFrameBuffer(FB_Default, false);
-			DrawFlatColor(object, glm::vec3(1.0f));
-			DrawContours(object);
-			DrawSeedPoints(object, glm::vec3(0.89f, 0.37f, 0.27f));
-			
-		}
-		/*m_Renderer->SwitchFrameBuffer(FB_Curvature, true);
-		DrawFullScreen(SH_Curvature, FB_Normals); 
-
-		m_Renderer->SwitchFrameBuffer(FB_Default, false);
-		DrawFramebufferContent(FB_Curvature); */
-	}
-
-	void Scene::MoveCamera(float x, float y, float z)
-	{
-		m_Camera->Move(x, y, z);
-	}
-
-	void Scene::ViewportSizeChanged(int newWidth, int newHeight)
-	{
-		m_Camera->SetViewportSize(newWidth, newHeight);
 	}
 
 	void Scene::DrawObject(const Unique<SceneObject>& object, EShaders shader) {
@@ -159,12 +266,26 @@ namespace Copperplate {
 		object->Draw();
 	}
 
-	void Scene::DrawSeedPoints(const Unique<SceneObject>& object, glm::vec3 color) {
+	void Scene::DrawSeedPoints(const Unique<SceneObject>& object, glm::vec3 color, float pointSize) {
 		object->SetShader(m_Shaders[SH_Flatcolor]);
 		m_Shaders[SH_Flatcolor]->SetVec3("color", color);
 		glEnable(GL_DEPTH_TEST);
-		glPointSize(4.0f);
+		glPointSize(pointSize);
 		object->DrawSeedPoints();
+	}
+
+	void Scene::TransformSeedPoints(const Unique<SceneObject>& object)
+	{		
+		m_ComputeShaders[SH_TransformSeeds]->Use();
+		m_Renderer->UseFrameBufferTexture(FB_Depth); 
+		object->TransformSeedPoints(m_ComputeShaders[SH_TransformSeeds]);
+	}
+
+	void Scene::DrawScreenSeeds(const Unique<SceneObject>& object, glm::vec3 color, float pointSize)	{
+		object->SetShader(m_Shaders[SH_Screenpoints]);
+		m_Shaders[SH_Screenpoints]->SetVec3("color", color);
+		glPointSize(pointSize);
+		object->DrawScreenSeeds();
 	}
 
 	void Scene::DrawFramebufferContent(EFramebuffers framebuffer) {

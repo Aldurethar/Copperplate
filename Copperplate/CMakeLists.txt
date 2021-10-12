@@ -21,6 +21,11 @@ set(SOURCE_LIST
 	shaders/normals.frag
 	shaders/curvature.vert
 	shaders/curvature.frag
+	shaders/transformseeds.comp
+	shaders/screenpoints.vert
+	shaders/screenpoints.frag
+	shaders/depth.vert
+	shaders/depth.frag
 )
 
 # Setup as an executable
