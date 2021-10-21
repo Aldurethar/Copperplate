@@ -91,6 +91,18 @@ namespace Copperplate {
 
 	};
 
+	//DISPLAY SETTINGS CLASS
+	class DisplaySettings {
+	public:
+		static bool RenderSeedPoints;
+		static bool RenderScreenSpaceSeeds;
+		static bool RenderContours;
+		static bool RenderHatching;
+		static int NumHatchingLines;
+		static int NumPointsPerHatch;
+		static EFramebuffers FramebufferToDisplay;
+	};
+
 	// Callback Functions for the window
 	void GlfwErrorCallback(int error, const char* description);
 

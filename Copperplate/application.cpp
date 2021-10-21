@@ -37,6 +37,7 @@ namespace Copperplate {
 	}
 
 	void Application::HandleKeyInput(int key) {
+		// Camera Movement
 		if (key == GLFW_KEY_E) {
 			m_Scene->MoveCamera(0.0f, 0.0f, -0.1f);
 		}
@@ -55,6 +56,48 @@ namespace Copperplate {
 		else if (key == GLFW_KEY_D) {
 			m_Scene->MoveCamera(-0.03f, 0.0f, 0.0f);
 		}
+
+		// Debug Display Settings
+		else if (key == GLFW_KEY_KP_1) {
+			DisplaySettings::RenderContours = !DisplaySettings::RenderContours;
+		}
+		else if (key == GLFW_KEY_KP_2) {
+			DisplaySettings::RenderSeedPoints = !DisplaySettings::RenderSeedPoints;
+		}
+		else if (key == GLFW_KEY_KP_3) {
+			DisplaySettings::RenderScreenSpaceSeeds = !DisplaySettings::RenderScreenSpaceSeeds;
+		}
+		else if (key == GLFW_KEY_KP_4) {
+			DisplaySettings::RenderHatching = !DisplaySettings::RenderHatching;
+		}
+		else if (key == GLFW_KEY_KP_ADD) {
+			DisplaySettings::NumHatchingLines++;
+			std::cout << "Drawing " << DisplaySettings::NumHatchingLines << "lines now \n";
+		}
+		else if (key == GLFW_KEY_KP_SUBTRACT) {
+			DisplaySettings::NumHatchingLines--;
+			std::cout << "Drawing " << DisplaySettings::NumHatchingLines << "lines now \n";
+		}
+		else if (key == GLFW_KEY_KP_MULTIPLY) {
+			DisplaySettings::NumPointsPerHatch++;
+		}
+		else if (key == GLFW_KEY_KP_DIVIDE) {
+			DisplaySettings::NumPointsPerHatch--;
+		}
+		else if (key == GLFW_KEY_1) {
+			DisplaySettings::FramebufferToDisplay = EFramebuffers::FB_Default;
+		}
+		else if (key == GLFW_KEY_2) {
+			DisplaySettings::FramebufferToDisplay = EFramebuffers::FB_Normals;
+		}
+		else if (key == GLFW_KEY_3) {
+			DisplaySettings::FramebufferToDisplay = EFramebuffers::FB_Depth;
+		}
+		else if (key == GLFW_KEY_4) {
+			DisplaySettings::FramebufferToDisplay = EFramebuffers::FB_Curvature;
+		}
+
+		// General Window input
 		else if (key == GLFW_KEY_ESCAPE) {
 			ShouldClose = true;
 		}

@@ -9,7 +9,7 @@
 
 namespace Copperplate {
 
-	const int SEEDS_PER_OBJECT = 5000;
+	const int SEEDS_PER_OBJECT = 2000;// 5000;
 	const int MAX_SEEDS_PER_FACE = 20;
 	const float Z_MIN = 0.1f;
 	const float Z_MAX = 50.0f;
@@ -29,6 +29,8 @@ namespace Copperplate {
 		void TransformSeedPoints(Shared<ComputeShader> shader);
 
 		void DrawScreenSeeds();
+
+		std::vector<ScreenSpaceSeed>& GetScreenSeeds();
 
 		void Move(glm::vec3 translation);
 
@@ -60,6 +62,7 @@ namespace Copperplate {
 		SH_Curvature,
 		SH_TransformSeeds,
 		SH_Screenpoints,
+		SH_HatchingLines,
 	};
 
 	class Scene {
@@ -86,8 +89,10 @@ namespace Copperplate {
 		void DrawFramebufferContent(EFramebuffers framebuffer);
 		void DrawFramebufferAlpha(EFramebuffers framebuffer);
 		void DrawFullScreen(EShaders shader, EFramebuffers sourceTex);
+		void DrawHatchingLines(EShaders shader, glm::vec3 color);
 
 		Unique<Renderer> m_Renderer;
+		Unique<Hatching> m_Hatching;
 		Unique<Camera> m_Camera;
 		std::map<EShaders, Shared<Shader>> m_Shaders;
 		std::map<EShaders, Shared<ComputeShader>> m_ComputeShaders;

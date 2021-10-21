@@ -127,6 +127,10 @@ namespace Copperplate {
 		glDrawArrays(GL_POINTS, 0, m_ScreenSpaceSeeds.size());
 	}
 
+	std::vector<ScreenSpaceSeed>& SceneObject::GetScreenSeeds()	{
+		return m_ScreenSpaceSeeds;
+	}
+
 	void SceneObject::Move(glm::vec3 translation)
 	{
 		m_Transform[3] += glm::vec4(translation, 0.0f);
@@ -136,6 +140,7 @@ namespace Copperplate {
 	Scene::Scene(Shared<Window> window) {
 		m_Camera = CreateUnique<Camera>(window->GetWidth(), window->GetHeight());
 		m_Renderer = CreateUnique<Renderer>(window);
+		m_Hatching = CreateUnique<Hatching>(window->GetWidth(), window->GetHeight());
 
 		//Setup the shaders
 		m_Shaders = std::map<EShaders, Shared<Shader>>();
@@ -144,15 +149,19 @@ namespace Copperplate {
 		
 		//Create the Scene Objects
 		m_SceneObjects = std::vector<Unique<SceneObject>>();
-		m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSmooth.obj", m_Shaders[SH_Contours]));
-		m_SceneObjects[0]->Move(glm::vec3(3.0f, 0.0f, 0.0f));
-		m_SceneObjects.push_back(CreateUnique<SceneObject>("Sphere.obj", m_Shaders[SH_Contours]));
+		//m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSmooth.obj", m_Shaders[SH_Contours]));
+		//m_SceneObjects[0]->Move(glm::vec3(3.0f, 0.0f, 0.0f));
+		m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSubdiv.obj", m_Shaders[SH_Contours]));
 
 	}
 
 	void Scene::Draw() {
 		//Update Shader Uniforms
 		UpdateUniforms();
+
+		//Reset Hatching
+		m_Hatching->ResetSeeds();
+		m_Hatching->ResetHatching();
 
 		//Fill Framebuffers
 		//Normals
@@ -179,14 +188,21 @@ namespace Copperplate {
 		glCheckError();
 		for (auto& object : m_SceneObjects) {			
 			DrawFlatColor(object, glm::vec3(1.0f));
-			DrawContours(object);
-			DrawSeedPoints(object, glm::vec3(0.89f, 0.37f, 0.27f), 8.0f);
 			TransformSeedPoints(object);
-			DrawScreenSeeds(object, glm::vec3(0.13f, 0.67f, 0.27f), 4.0f); 
+			m_Hatching->AddSeeds(object->GetScreenSeeds());
+			if (DisplaySettings::RenderContours) 
+				DrawContours(object);
+			if (DisplaySettings::RenderSeedPoints) 
+				DrawSeedPoints(object, glm::vec3(0.89f, 0.37f, 0.27f), 8.0f);
+			if (DisplaySettings::RenderScreenSpaceSeeds) 
+				DrawScreenSeeds(object, glm::vec3(0.13f, 0.67f, 0.27f), 4.0f); 
 		}
+		m_Hatching->CreateHatchingLines();
+		if (DisplaySettings::RenderHatching) 
+			DrawHatchingLines(SH_HatchingLines, glm::vec3(0.16f, 0.37f, 0.74f));
 		
-		m_Renderer->SwitchFrameBuffer(FB_Default, false);
-		DrawFramebufferContent(FB_Curvature);
+		if (DisplaySettings::FramebufferToDisplay != EFramebuffers::FB_Default)
+			DrawFramebufferContent(DisplaySettings::FramebufferToDisplay);
 	}
 
 	void Scene::MoveCamera(float x, float y, float z) {
@@ -224,6 +240,9 @@ namespace Copperplate {
 
 		Shared<Shader> screenPoints = CreateShared<Shader>(ST_VertFrag, "shaders/screenpoints.vert", nullptr, "shaders/screenpoints.frag");
 		m_Shaders[SH_Screenpoints] = screenPoints;
+
+		Shared<Shader> hatchingLines = CreateShared<Shader>(ST_VertFrag, "shaders/hatchinglines.vert", nullptr, "shaders/hatchinglines.frag");
+		m_Shaders[SH_HatchingLines] = hatchingLines;
 	}
 
 	void Scene::UpdateUniforms() {
@@ -304,6 +323,14 @@ namespace Copperplate {
 		m_Shaders[shader]->Use();
 		glDisable(GL_DEPTH_TEST);
 		m_Renderer->DrawFramebufferContent(sourceTex);
+	}
+
+	void Scene::DrawHatchingLines(EShaders shader, glm::vec3 color) {
+		m_Shaders[shader]->SetVec3("color", color);
+		m_Shaders[shader]->Use();
+		glDisable(GL_DEPTH_TEST);
+		glLineWidth(2.0f);
+		m_Hatching->DrawHatchingLines();
 	}
 
 }

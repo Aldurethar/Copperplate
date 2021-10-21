@@ -58,14 +58,14 @@ namespace Copperplate {
 			aiProcess_GenSmoothNormals);
 
 		if (!scene) {
-			std::cout << "Asset Import Failed:" << importer.GetErrorString();
+			std::cout << "Asset Import Failed:" << importer.GetErrorString() << "\n";
 			return nullptr;
 		}
 
 		Unique<Mesh> mesh = CreateUnique<Mesh>();
 
 		aiMesh* importedMesh = scene->mMeshes[0];
-		std::cout << "Importing Mesh with " << importedMesh->mNumVertices << " Verts and " << importedMesh->mNumFaces << " Faces";
+		std::cout << "Importing Mesh with " << importedMesh->mNumVertices << " Verts and " << importedMesh->mNumFaces << " Faces \n";
 
 		// Construct Halfedge data structure
 		// Vertices

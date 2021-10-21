@@ -20,7 +20,7 @@ layout(std140, binding = 1) buffer seedsOut {
 
 layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
 
-const float eps = 1e-6;
+const float depthBias = 1e-4;
 
 uniform sampler2D Depth;
 
@@ -34,23 +34,20 @@ void main(){
 	uint gid = gl_GlobalInvocationID.x;
 
 	if (gid < numSeeds){
-		vec4 viewPos = view * model * vec4(iSeeds[gid].pos, 1.0);
-		vec4 screenPos = projection * viewPos;
-		vec2 outPos = screenPos.xy / screenPos.w;
+		vec4 clipPos = projection * view * model * vec4(iSeeds[gid].pos, 1.0);
+		vec2 screenPos = ((clipPos.xy / clipPos.w) * 0.5) + vec2(0.5);
 		int inbounds = 1;
-		if(outPos.x < -1.0 || outPos.x > 1.0) inbounds = 0;
-		if(outPos.y < -1.0 || outPos.y > 1.0) inbounds = 0;
+		if(screenPos.x < 0.0 || screenPos.x > 1.0) inbounds = 0;
+		if(screenPos.y < 0.0 || screenPos.y > 1.0) inbounds = 0;
 
-		float depth = screenPos.z * 0.5 + 0.5;
+		float depth = clipPos.z * 0.5 + 0.5;
 
-		vec2 samplePos = (outPos * 0.5) + vec2(0.5);
-		float testDepth = texture(Depth, samplePos).r;
+		float testDepth = texture(Depth, screenPos).r;
 		int keep;
-		if (depth <= testDepth) keep = 1;
+		if (depth <= (testDepth + depthBias)) keep = 1;
 		else keep = 0;
-		//keep = 1;
 
-		oSeeds[gid].pos = outPos;
+		oSeeds[gid].pos = screenPos;
 		oSeeds[gid].importance = iSeeds[gid].importance;
 		oSeeds[gid].keep = keep * inbounds;
 	} else {

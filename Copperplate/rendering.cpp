@@ -17,6 +17,16 @@ namespace Copperplate {
 	const glm::vec4 DEPTH_CLEARCOLOR = glm::vec4(1.0f, 1.0f, 1.0f, 0.0f);
 	const glm::vec4 CURVATURE_CLEARCOLOR = glm::vec4(0.0f);
 
+	// Display Settings
+	bool DisplaySettings::RenderContours = true;
+	bool DisplaySettings::RenderSeedPoints = true;
+	bool DisplaySettings::RenderScreenSpaceSeeds = true;
+	bool DisplaySettings::RenderHatching = true;
+	int DisplaySettings::NumHatchingLines = 3;
+	int DisplaySettings::NumPointsPerHatch = 3;
+	EFramebuffers DisplaySettings::FramebufferToDisplay = EFramebuffers::FB_Default;
+
+
 	// Window Class
 	Window::Window() {
 		glfwSetErrorCallback(GlfwErrorCallback);
@@ -309,7 +319,9 @@ namespace Copperplate {
 	}
 
 	void GlfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-		Application::HandleKeyInput(key);
+		if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+			Application::HandleKeyInput(key);
+		}
 	}
 
 	void GlfwMouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {

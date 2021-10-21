@@ -26,6 +26,8 @@ set(SOURCE_LIST
 	shaders/screenpoints.frag
 	shaders/depth.vert
 	shaders/depth.frag
+	shaders/hatchinglines.vert
+	shaders/hatchinglines.frag
 )
 
 # Setup as an executable

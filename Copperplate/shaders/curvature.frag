@@ -108,5 +108,6 @@ void main() {
 	float mc = .5*(ee.z+ee.w);
 	vec4 firstGaussianDeriv = vec4(ee.xy,mc,length(pix.xyz));
 	FragColor = vec4(ee.xy, 0.0, 1.0);
+	//FragColor = vec4(-ee.xy, 0.0, 1.0);
 	//FragColor = pix;
 }
