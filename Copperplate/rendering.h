@@ -98,6 +98,7 @@ namespace Copperplate {
 		static bool RenderScreenSpaceSeeds;
 		static bool RenderContours;
 		static bool RenderHatching;
+		static bool RenderCurrentDebug;
 		static int NumHatchingLines;
 		static int NumPointsPerHatch;
 		static EFramebuffers FramebufferToDisplay;

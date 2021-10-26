@@ -22,6 +22,7 @@ namespace Copperplate {
 	bool DisplaySettings::RenderSeedPoints = true;
 	bool DisplaySettings::RenderScreenSpaceSeeds = true;
 	bool DisplaySettings::RenderHatching = true;
+	bool DisplaySettings::RenderCurrentDebug = true;
 	int DisplaySettings::NumHatchingLines = 3;
 	int DisplaySettings::NumPointsPerHatch = 3;
 	EFramebuffers DisplaySettings::FramebufferToDisplay = EFramebuffers::FB_Default;
@@ -199,7 +200,8 @@ namespace Copperplate {
 		glGenTextures(1, &normal.m_Texture);
 		glBindTexture(GL_TEXTURE_2D, normal.m_Texture);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_Window->GetWidth(), m_Window->GetHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		// Needs a floating point internal format to avoid values being clamped to [0;1]
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, m_Window->GetWidth(), m_Window->GetHeight(), 0, GL_RGBA, GL_SHORT, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glBindTexture(GL_TEXTURE_2D, 0);
@@ -260,7 +262,8 @@ namespace Copperplate {
 		glGenTextures(1, &curvature.m_Texture);
 		glBindTexture(GL_TEXTURE_2D, curvature.m_Texture);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_Window->GetWidth(), m_Window->GetHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		// Needs a floating point internal format to avoid values being clamped to [0;1] 
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, m_Window->GetWidth(), m_Window->GetHeight(), 0, GL_RGBA, GL_SHORT, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glBindTexture(GL_TEXTURE_2D, 0);

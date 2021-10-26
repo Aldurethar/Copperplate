@@ -170,6 +170,8 @@ namespace Copperplate {
 		for (auto& object : m_SceneObjects) {
 			DrawObject(object, SH_Normals);
 		}
+		//if(DisplaySettings::RenderCurrentDebug)
+		//	DrawFullScreen(SH_SphereNormals, FB_Default); 
 
 		//Depth
 		m_Renderer->SwitchFrameBuffer(FB_Depth, true); 
@@ -243,6 +245,9 @@ namespace Copperplate {
 
 		Shared<Shader> hatchingLines = CreateShared<Shader>(ST_VertFrag, "shaders/hatchinglines.vert", nullptr, "shaders/hatchinglines.frag");
 		m_Shaders[SH_HatchingLines] = hatchingLines;
+
+		Shared<Shader> sphereNormals = CreateShared<Shader>(ST_VertFrag, "shaders/spherenormals.vert", nullptr, "shaders/spherenormals.frag");
+		m_Shaders[SH_SphereNormals] = sphereNormals;
 	}
 
 	void Scene::UpdateUniforms() {
@@ -258,7 +263,7 @@ namespace Copperplate {
 		m_Shaders[SH_Normals]->SetFloat("zMax", Z_MAX);
 		m_Shaders[SH_Depth]->SetMat4("view", m_Camera->GetViewMatrix());
 		m_Shaders[SH_Depth]->SetMat4("projection", m_Camera->GetProjectionMatrix());
-		m_Shaders[SH_Curvature]->SetFloat("sigma", 5.0f);
+		m_Shaders[SH_Curvature]->SetFloat("sigma", 2.6f);
 		m_ComputeShaders[SH_TransformSeeds]->SetMat4("view", m_Camera->GetViewMatrix());
 		m_ComputeShaders[SH_TransformSeeds]->SetMat4("projection", m_Camera->GetProjectionMatrix());
 		glCheckError();

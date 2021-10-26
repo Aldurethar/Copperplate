@@ -161,6 +161,9 @@ namespace Copperplate {
 		//DEBUGGING
 		int maxPoints = DisplaySettings::NumPointsPerHatch;
 		if (maxPoints <= 0) maxPoints = 999999;
+		
+		glm::vec2 dir = glm::vec2(-1.0f, 0.0f); 
+		glm::vec2 dirChange = glm::vec2(0.0f, seed->m_Importance);
 
 		std::vector<glm::vec2> linePoints;
 		int numPoints = 1;
@@ -171,8 +174,10 @@ namespace Copperplate {
 		
 		//extrude left
 		while (!HasCollision(currPos) && pointsLeft < maxPoints) {
+			dir = glm::normalize(dir + dirChange);
+			dirChange = glm::vec2(dir.y, -dir.x) * seed->m_Importance;
 			AddCollisionPoint(currPos);
-			currPixPos = currPixPos + (LINE_SEPARATION_DISTANCE * glm::vec2(-1.0f, 0.0f));
+			currPixPos = currPixPos + (LINE_SEPARATION_DISTANCE * dir);
 			currPos = currPixPos / m_ViewportSize;
 			linePoints.push_back(currPos);
 			numPoints++;
@@ -183,10 +188,14 @@ namespace Copperplate {
 		currPos = currPixPos / m_ViewportSize;
 		linePoints.push_back(currPos);
 		numPoints++;
+		dir = glm::vec2(1.0f, 0.0f);
+		dirChange = glm::vec2(dir.y, -dir.x) * seed->m_Importance;
 		//extrude right
 		while (!HasCollision(currPos) && numPoints < maxPoints*2 + 1) {
+			dir = glm::normalize(dir + dirChange);
+			dirChange = glm::vec2(dir.y, -dir.x) * seed->m_Importance;
 			AddCollisionPoint(currPos);
-			currPixPos = currPixPos + (LINE_SEPARATION_DISTANCE * glm::vec2(1.0f, 0.0f));
+			currPixPos = currPixPos + (LINE_SEPARATION_DISTANCE * dir);
 			currPos = currPixPos / m_ViewportSize;
 			linePoints.push_back(currPos);
 			numPoints++;
@@ -207,6 +216,7 @@ namespace Copperplate {
 				if (dist < closestDistance && dist >= LINE_SEPARATION_DISTANCE) {
 					candidate = currSeed;
 					foundCandidate = true;
+					closestDistance = dist;
 				}
 			}			
 		}

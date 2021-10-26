@@ -70,6 +70,9 @@ namespace Copperplate {
 		else if (key == GLFW_KEY_KP_4) {
 			DisplaySettings::RenderHatching = !DisplaySettings::RenderHatching;
 		}
+		else if (key == GLFW_KEY_KP_9) {
+			DisplaySettings::RenderCurrentDebug = !DisplaySettings::RenderCurrentDebug;
+		}
 		else if (key == GLFW_KEY_KP_ADD) {
 			DisplaySettings::NumHatchingLines++;
 			std::cout << "Drawing " << DisplaySettings::NumHatchingLines << "lines now \n";

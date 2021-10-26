@@ -1,15 +1,15 @@
 #version 460 core
 out vec4 FragColor;
 
-in vec2 TexCoords;
+in vec2 texcoord; // current pixel coord
 
 #define F 3.0 // used to define the window size (sigma*F)
-#define RESOL 2.0 // resolution for multisampling (steps per pixel)
+#define RESOL 2.0 // multisampling (increase resolution)
 #define PI 3.14159265359
 #define TWOPI 6.28318531
 
-uniform sampler2D normalMap; // input normals in camera space (stored in rgb) + depth (stored in a)
-uniform float sigma; // the scale at which you want to compute curvature (keep it low or it will be slow) 
+uniform sampler2D normalMap;
+uniform float sigma;
 
 float halfsize = ceil(F*sigma); // kernel halfsize (in pixels)
 const float stepSize = 1.0/RESOL; // step size for sampling (in pixels)
@@ -67,7 +67,7 @@ vec3 hessianMatrix(in vec4 pixel) {
 		for(float j=-halfsize;j<=halfsize;j+=stepSize) {
 
 			vec2 offset = vec2(i,j);
-			vec4 currNorm = texture(normalMap,TexCoords+offset*pixelSize);
+			vec4 currNorm = texture(normalMap,texcoord+offset*pixelSize);
 			vec2 currGrad = grad(currNorm);
 			float currWeight = weight(currNorm, pixel);
 	
@@ -100,14 +100,11 @@ vec4 eigenValues(in vec3 m) {
 	return k1>k2 ? vec4(d1.x,d1.y,k1,k2) : vec4(d2.x,d2.y,k2,k1);
 }
 
-
 void main() {
-	vec4 pix = texture(normalMap,TexCoords);
+	vec4 pix = texture(normalMap,texcoord);
 	vec3 H = hessianMatrix(pix);
 	vec4 ee = eigenValues(H);
 	float mc = .5*(ee.z+ee.w);
 	vec4 firstGaussianDeriv = vec4(ee.xy,mc,length(pix.xyz));
-	FragColor = vec4(ee.xy, 0.0, 1.0);
-	//FragColor = vec4(-ee.xy, 0.0, 1.0);
-	//FragColor = pix;
+	FragColor = vec4(firstGaussianDeriv.xyz, 1.0);
 }

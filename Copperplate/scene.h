@@ -9,7 +9,7 @@
 
 namespace Copperplate {
 
-	const int SEEDS_PER_OBJECT = 2000;// 5000;
+	const int SEEDS_PER_OBJECT = 5000;
 	const int MAX_SEEDS_PER_FACE = 20;
 	const float Z_MIN = 0.1f;
 	const float Z_MAX = 50.0f;
@@ -63,6 +63,7 @@ namespace Copperplate {
 		SH_TransformSeeds,
 		SH_Screenpoints,
 		SH_HatchingLines,
+		SH_SphereNormals,
 	};
 
 	class Scene {

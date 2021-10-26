@@ -28,6 +28,8 @@ set(SOURCE_LIST
 	shaders/depth.frag
 	shaders/hatchinglines.vert
 	shaders/hatchinglines.frag
+	shaders/spherenormals.vert
+	shaders/spherenormals.frag
 )
 
 # Setup as an executable
