@@ -31,6 +31,7 @@ namespace Copperplate {
 
 		void ResetSeeds();
 		void ResetHatching();
+		void AddContourCollision(const std::vector<glm::vec2>& contourSegments);
 		void AddSeeds(const std::vector<ScreenSpaceSeed>& seeds);
 		void CreateHatchingLines();
 		void DrawHatchingLines();

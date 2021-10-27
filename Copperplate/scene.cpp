@@ -25,6 +25,9 @@ namespace Copperplate {
 		m_ScreenSpaceSeeds = std::vector<ScreenSpaceSeed>();
 		m_ScreenSpaceSeeds.reserve(m_SeedPoints.size());
 
+		m_ContourSegments = std::vector<glm::vec2>();
+		m_ContourSegments.reserve(m_Mesh->GetFaces().size() * 3 * 2);
+
 		std::vector<float> seedsData;
 		seedsData.reserve(4 * m_SeedPoints.size());
 		for (SeedPoint sp : m_SeedPoints) {
@@ -35,6 +38,7 @@ namespace Copperplate {
 		}
 
 		//Setup OpenGL Buffers
+		//Seed Points
 		glGenVertexArrays(1, &m_SeedsVAO);
 		glGenBuffers(1, &m_SeedsVertexBuffer);
 
@@ -55,7 +59,7 @@ namespace Copperplate {
 		
 		glGenBuffers(1, &m_SeedsSSBO);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_SeedsSSBO);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, numOutputs * sizeof(struct OutputSeed), NULL, GL_STREAM_READ);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, numOutputs * sizeof(struct OutputSeed), NULL, GL_DYNAMIC_READ);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 		//Screen Space Seed Points
@@ -64,10 +68,31 @@ namespace Copperplate {
 
 		glBindVertexArray(m_ScreenSeedsVAO);
 		glBindBuffer(GL_ARRAY_BUFFER, m_ScreenSeedsVBO);
-		glBufferData(GL_ARRAY_BUFFER, m_SeedPoints.size() * 3 * sizeof(float), NULL, GL_STREAM_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, m_SeedPoints.size() * 3 * sizeof(float), NULL, GL_DYNAMIC_DRAW);
 
 		glEnableVertexAttribArray(0);
 		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (GLvoid*)0);
+
+		glCheckError();
+
+		//Transform Feedback Buffer for Contour Segments
+		m_Mesh->Bind();
+		glGenBuffers(1, &m_ContoursFeedbackBuffer);
+		glBindBuffer(GL_ARRAY_BUFFER, m_ContoursFeedbackBuffer);
+		glBufferData(GL_ARRAY_BUFFER, m_Mesh->GetFaces().size() * 3 * 2 * 2 * sizeof(float), nullptr, GL_DYNAMIC_READ);
+
+		glCheckError();
+
+		//Contour Vertex Data
+		glGenVertexArrays(1, &m_ContoursVAO);
+		glGenBuffers(1, &m_ContoursVBO);
+
+		glBindVertexArray(m_ContoursVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, m_ContoursVBO);
+		glBufferData(GL_ARRAY_BUFFER, m_Mesh->GetFaces().size() * 3 * 2 * 2 * sizeof(float), nullptr, GL_DYNAMIC_DRAW);
+
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (GLvoid*)0);
 
 		glCheckError();
 	}
@@ -78,6 +103,48 @@ namespace Copperplate {
 		glCheckError();
 		m_Shader->Use();
 		m_Mesh->Draw();
+	}
+
+	void SceneObject::ExtractContours() {
+		unsigned int query;
+		glGenQueries(1, &query);
+		m_Shader->SetMat4("model", m_Transform);
+		m_Shader->SetMat4("modelInvTrans", glm::transpose(glm::inverse(m_Transform)));
+		glCheckError();
+		m_Shader->Use();
+
+		glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, m_ContoursFeedbackBuffer);
+		glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, query);
+		glBeginTransformFeedback(GL_LINES);
+		glCheckError();
+		m_Mesh->Draw();
+		glEndTransformFeedback();
+		glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
+		glFlush();
+		glCheckError();
+
+		unsigned int numLines;
+		glGetQueryObjectuiv(query, GL_QUERY_RESULT, &numLines);
+
+		glm::vec2* feedback{ new glm::vec2[numLines * 2]{} };
+
+		glGetBufferSubData(GL_TRANSFORM_FEEDBACK_BUFFER, 0, numLines * 2 * 2 * sizeof(float), feedback);
+
+		m_ContourSegments.clear();
+		for (int i = 0; i < numLines; i++) {
+			m_ContourSegments.push_back(feedback[2 * i]);
+			m_ContourSegments.push_back(feedback[2 * i + 1]);
+		}
+		
+		delete[] feedback;
+	}
+
+	void SceneObject::DrawContours() {
+		m_Shader->Use();
+		glBindVertexArray(m_ContoursVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, m_ContoursVBO);
+		glBufferData(GL_ARRAY_BUFFER, m_ContourSegments.size() * 2 * sizeof(float), m_ContourSegments.data(), GL_DYNAMIC_DRAW);
+		glDrawArrays(GL_LINES, 0, m_ContourSegments.size());
 	}
 
 	void SceneObject::SetShader(Shared<Shader> shader)	{
@@ -129,6 +196,10 @@ namespace Copperplate {
 
 	std::vector<ScreenSpaceSeed>& SceneObject::GetScreenSeeds()	{
 		return m_ScreenSpaceSeeds;
+	}
+
+	std::vector<glm::vec2>& SceneObject::GetContourSegments() {
+		return m_ContourSegments;
 	}
 
 	void SceneObject::Move(glm::vec3 translation)
@@ -190,10 +261,12 @@ namespace Copperplate {
 		glCheckError();
 		for (auto& object : m_SceneObjects) {			
 			DrawFlatColor(object, glm::vec3(1.0f));
+			ExtractContours(object);
+			m_Hatching->AddContourCollision(object->GetContourSegments());
 			TransformSeedPoints(object);
 			m_Hatching->AddSeeds(object->GetScreenSeeds());
 			if (DisplaySettings::RenderContours) 
-				DrawContours(object);
+				DrawContours(object, glm::vec3(0.0f));
 			if (DisplaySettings::RenderSeedPoints) 
 				DrawSeedPoints(object, glm::vec3(0.89f, 0.37f, 0.27f), 8.0f);
 			if (DisplaySettings::RenderScreenSpaceSeeds) 
@@ -219,7 +292,11 @@ namespace Copperplate {
 		Shared<Shader> flatColor = CreateShared<Shader>(ST_VertFrag, "shaders/flatcolor.vert", nullptr, "shaders/flatcolor.frag");
 		m_Shaders[SH_Flatcolor] = flatColor;
 
-		Shared<Shader> contours = CreateShared<Shader>(ST_VertGeomFrag, "shaders/contours.vert", "shaders/contours.geom", "shaders/contours.frag");
+		//Shared<Shader> contours = CreateShared<Shader>(ST_VertGeomFrag, "shaders/contours.vert", "shaders/contours.geom", "shaders/contours.frag", "screenPos");
+		Shared<Shader> extractContours = CreateShared<Shader>(ST_VertGeom, "shaders/extractcontours.vert", "shaders/extractcontours.geom", nullptr, "screenPos");
+		m_Shaders[SH_ExtractContours] = extractContours;
+
+		Shared<Shader> contours = CreateShared<Shader>(ST_VertFrag, "shaders/contours.vert", nullptr, "shaders/contours.frag");
 		m_Shaders[SH_Contours] = contours;
 
 		Shared<Shader> displayTex = CreateShared<Shader>(ST_VertFrag, "shaders/displaytex.vert", nullptr, "shaders/displaytex.frag");
@@ -253,9 +330,9 @@ namespace Copperplate {
 	void Scene::UpdateUniforms() {
 		m_Shaders[SH_Flatcolor]->SetMat4("view", m_Camera->GetViewMatrix());
 		m_Shaders[SH_Flatcolor]->SetMat4("projection", m_Camera->GetProjectionMatrix());
-		m_Shaders[SH_Contours]->SetMat4("view", m_Camera->GetViewMatrix());
-		m_Shaders[SH_Contours]->SetMat4("projection", m_Camera->GetProjectionMatrix());
-		m_Shaders[SH_Contours]->SetVec3("viewDirection", m_Camera->GetForwardVector());
+		m_Shaders[SH_ExtractContours]->SetMat4("view", m_Camera->GetViewMatrix());
+		m_Shaders[SH_ExtractContours]->SetMat4("projection", m_Camera->GetProjectionMatrix());
+		m_Shaders[SH_ExtractContours]->SetVec3("viewDirection", m_Camera->GetForwardVector());
 		m_Shaders[SH_Normals]->SetMat4("view", m_Camera->GetViewMatrix());
 		m_Shaders[SH_Normals]->SetMat4("viewInvTrans", glm::transpose(glm::inverse(m_Camera->GetViewMatrix())));
 		m_Shaders[SH_Normals]->SetMat4("projection", m_Camera->GetProjectionMatrix());
@@ -282,12 +359,18 @@ namespace Copperplate {
 		object->Draw();
 	}
 
-	void Scene::DrawContours(const Unique<SceneObject>& object) {
+	void Scene::ExtractContours(const Unique<SceneObject>& object) {
+		object->SetShader(m_Shaders[SH_ExtractContours]);
+		m_Renderer->UseFrameBufferTexture(FB_Depth);
+		object->ExtractContours();
+	}
+
+	void Scene::DrawContours(const Unique<SceneObject>& object, glm::vec3 color) {
 		object->SetShader(m_Shaders[SH_Contours]);
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LEQUAL);
+		m_Shaders[SH_Contours]->SetVec3("color", color);
+		glDisable(GL_DEPTH_TEST);
 		glLineWidth(2.0f);
-		object->Draw();
+		object->DrawContours();
 	}
 
 	void Scene::DrawSeedPoints(const Unique<SceneObject>& object, glm::vec3 color, float pointSize) {

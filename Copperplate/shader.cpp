@@ -43,6 +43,40 @@ namespace Copperplate {
 		if (hasFrag) glDeleteShader(fragment);
 	}
 
+	Shader::Shader(EShaderTypes types, const char* vertexPath, const char* geometryPath, const char* fragmentPath, const char* feedbackVarying) {
+		bool hasVert = (types & ST_Vertex);
+		bool hasGeom = (types & ST_Geometry);
+		bool hasFrag = (types & ST_Fragment);
+
+		// Read Shader Files
+		std::string vertexCode, geometryCode, fragmentCode;
+		if (hasVert) vertexCode = ReadShader(vertexPath);
+		if (hasGeom) geometryCode = ReadShader(geometryPath);
+		if (hasFrag) fragmentCode = ReadShader(fragmentPath);
+
+		// Compile Shaders
+		unsigned int vertex, geometry, fragment;
+		if (hasVert) vertex = CompileShader(ST_Vertex, vertexCode);
+		if (hasGeom) geometry = CompileShader(ST_Geometry, geometryCode);
+		if (hasFrag) fragment = CompileShader(ST_Fragment, fragmentCode);
+
+		// Create program
+		m_ProgramID = glCreateProgram();
+		if (hasVert) glAttachShader(m_ProgramID, vertex);
+		if (hasGeom) glAttachShader(m_ProgramID, geometry);
+		if (hasFrag) glAttachShader(m_ProgramID, fragment);
+
+		// Setup Transform Feedback and Link Program
+		const char* feedbackVaryings[] = { feedbackVarying };
+		glTransformFeedbackVaryings(m_ProgramID, 1, feedbackVaryings, GL_INTERLEAVED_ATTRIBS);
+		LinkProgram(m_ProgramID);
+
+		// delete the shaders as they're linked into our program now and no longer necessary
+		if (hasVert) glDeleteShader(vertex);
+		if (hasGeom) glDeleteShader(geometry);
+		if (hasFrag) glDeleteShader(fragment);
+	}
+
 	std::string Shader::ReadShader(const char* filePath) {
 		std::string shaderCode;
 		std::ifstream shaderFile;

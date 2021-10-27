@@ -20,7 +20,8 @@ namespace Copperplate {
 
 	class Shader {
 	public:
-		Shader(EShaderTypes types, const char* vertexPath, const char* geometryPath, const char* fragmentPath);		
+		Shader(EShaderTypes types, const char* vertexPath, const char* geometryPath, const char* fragmentPath);	
+		Shader(EShaderTypes types, const char* vertexPath, const char* geometryPath, const char* fragmentPath, const char* feedbackVarying);
 
 		void Use();
 		void UpdateUniforms();

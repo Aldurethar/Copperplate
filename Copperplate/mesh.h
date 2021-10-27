@@ -24,6 +24,7 @@ namespace Copperplate {
 		Mesh();
 
 		void Draw();
+		void Bind();
 
 		float GetTotalArea();
 

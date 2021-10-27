@@ -198,6 +198,10 @@ namespace Copperplate {
 		glDrawElements(GL_TRIANGLES_ADJACENCY, m_IndexData.size(), GL_UNSIGNED_INT, 0);
 	}
 
+	void Mesh::Bind() {
+		glBindVertexArray(m_VertexArrayObject);
+	}
+
 	float Mesh::GetTotalArea() {
 		float area = 0;
 		for (Face face : m_Faces) {

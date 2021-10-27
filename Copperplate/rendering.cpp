@@ -14,7 +14,7 @@ namespace Copperplate {
 
 	const glm::vec4 IMAGE_CLEARCOLOR = glm::vec4(0.89f, 0.87f, 0.53f, 1.0f);
 	const glm::vec4 NORMAL_CLEARCOLOR = glm::vec4(0.0f);
-	const glm::vec4 DEPTH_CLEARCOLOR = glm::vec4(1.0f, 1.0f, 1.0f, 0.0f);
+	const glm::vec4 DEPTH_CLEARCOLOR = glm::vec4(100.0f, 1.0f, 1.0f, 0.0f);
 	const glm::vec4 CURVATURE_CLEARCOLOR = glm::vec4(0.0f);
 
 	// Display Settings

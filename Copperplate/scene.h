@@ -9,8 +9,8 @@
 
 namespace Copperplate {
 
-	const int SEEDS_PER_OBJECT = 5000;
-	const int MAX_SEEDS_PER_FACE = 20;
+	const int SEEDS_PER_OBJECT = 3000;
+	const int MAX_SEEDS_PER_FACE = 50;
 	const float Z_MIN = 0.1f;
 	const float Z_MAX = 50.0f;
 	const int COMPUTE_GROUPSIZE = 128;
@@ -22,6 +22,9 @@ namespace Copperplate {
 
 		void Draw();
 
+		void ExtractContours();
+		void DrawContours();
+
 		void SetShader(Shared<Shader> shader);
 
 		void DrawSeedPoints();
@@ -31,6 +34,7 @@ namespace Copperplate {
 		void DrawScreenSeeds();
 
 		std::vector<ScreenSpaceSeed>& GetScreenSeeds();
+		std::vector<glm::vec2>& GetContourSegments();
 
 		void Move(glm::vec3 translation);
 
@@ -43,17 +47,22 @@ namespace Copperplate {
 		glm::mat4 m_Transform;
 		std::vector<SeedPoint> m_SeedPoints;
 		std::vector<ScreenSpaceSeed> m_ScreenSpaceSeeds;
+		std::vector<glm::vec2> m_ContourSegments;
 
 		unsigned int m_SeedsVAO;
 		unsigned int m_SeedsVertexBuffer;
 		unsigned int m_SeedsSSBO;
 		unsigned int m_ScreenSeedsVAO;
 		unsigned int m_ScreenSeedsVBO;
+		unsigned int m_ContoursFeedbackBuffer;
+		unsigned int m_ContoursVAO;
+		unsigned int m_ContoursVBO;
 
 	};
 	
 	enum EShaders {
 		SH_Flatcolor,
+		SH_ExtractContours,
 		SH_Contours,
 		SH_DisplayTex,
 		SH_DisplayTexAlpha,
@@ -83,7 +92,8 @@ namespace Copperplate {
 
 		void DrawObject(const Unique<SceneObject>& object, EShaders shader);
 		void DrawFlatColor(const Unique<SceneObject>& object, glm::vec3 color);
-		void DrawContours(const Unique<SceneObject>& object);
+		void ExtractContours(const Unique<SceneObject>& object);
+		void DrawContours(const Unique<SceneObject>& object,  glm::vec3 color);
 		void DrawSeedPoints(const Unique<SceneObject>& object, glm::vec3 color, float pointSize);
 		void TransformSeedPoints(const Unique<SceneObject>& object);
 		void DrawScreenSeeds(const Unique<SceneObject>& object, glm::vec3 color, float pointSize);

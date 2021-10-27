@@ -98,6 +98,20 @@ namespace Copperplate {
 		m_LinesIndexNum = 0;
 	}
 
+	void Hatching::AddContourCollision(const std::vector<glm::vec2>& contourSegments) {
+		for (int i = 0; i < contourSegments.size(); i += 2) {
+			glm::vec2 pixPos1 = contourSegments[i] * m_ViewportSize;
+			glm::vec2 pixPos2 = contourSegments[i + 1] * m_ViewportSize;
+			float length = glm::distance(pixPos1, pixPos2);
+			int steps = ceil(length / LINE_TEST_DISTANCE);
+			for (int j = 0; j <= steps; j++) {
+				float p = j / (float)steps;
+				glm::vec2 pos = (1.0f - p) * contourSegments[i] + p * contourSegments[i+1];
+				AddCollisionPoint(pos);
+			}
+		}
+	}
+
 	void Hatching::AddSeeds(const std::vector<ScreenSpaceSeed> &seeds) {
 		for (int i = 0; i < seeds.size(); i++) {
 			m_Seedpoints.emplace_back(seeds[i]);
@@ -113,6 +127,7 @@ namespace Copperplate {
 		for (ScreenSpaceSeed& seed : m_Seedpoints) {
 			m_UnusedPoints.insert(&seed);
 		}
+		CleanUnusedPoints();
 
 		//start with highest importance seed point
 		ScreenSpaceSeed *start = &(m_Seedpoints[0]);

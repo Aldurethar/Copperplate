@@ -11,8 +11,9 @@ set(SOURCE_LIST
 	shaders/flatcolor.vert
 	shaders/flatcolor.frag
 	shaders/contours.vert
-	shaders/contours.geom
 	shaders/contours.frag
+	shaders/extractcontours.vert
+	shaders/extractcontours.geom
 	shaders/displaytex.vert
 	shaders/displaytex.frag
 	shaders/displaytexalpha.vert
