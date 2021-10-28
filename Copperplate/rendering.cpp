@@ -19,8 +19,8 @@ namespace Copperplate {
 
 	// Display Settings
 	bool DisplaySettings::RenderContours = true;
-	bool DisplaySettings::RenderSeedPoints = true;
-	bool DisplaySettings::RenderScreenSpaceSeeds = true;
+	bool DisplaySettings::RenderSeedPoints = false;
+	bool DisplaySettings::RenderScreenSpaceSeeds = false;
 	bool DisplaySettings::RenderHatching = true;
 	bool DisplaySettings::RenderCurrentDebug = true;
 	int DisplaySettings::NumHatchingLines = 3;

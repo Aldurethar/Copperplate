@@ -67,6 +67,8 @@ namespace Copperplate {
 				m_CollisionPoints.push_back(std::vector<glm::vec2>());
 			}
 		}
+
+		m_CurvatureData = CreateUnique<Image>(m_ViewportSize.x, m_ViewportSize.y);
 		
 		// setup opengl buffers
 		glGenVertexArrays(1, &m_LinesVAO);
@@ -116,6 +118,10 @@ namespace Copperplate {
 		for (int i = 0; i < seeds.size(); i++) {
 			m_Seedpoints.emplace_back(seeds[i]);
 		}
+	}
+
+	void Hatching::GrabCurvatureData() {
+		m_CurvatureData->CopyFrameBuffer();
 	}
 
 	void Hatching::CreateHatchingLines() {
@@ -177,20 +183,24 @@ namespace Copperplate {
 		int maxPoints = DisplaySettings::NumPointsPerHatch;
 		if (maxPoints <= 0) maxPoints = 999999;
 		
-		glm::vec2 dir = glm::vec2(-1.0f, 0.0f); 
-		glm::vec2 dirChange = glm::vec2(0.0f, seed->m_Importance);
+		glm::vec2 dir;
+		glm::vec2 sampleDir;
 
 		std::vector<glm::vec2> linePoints;
 		int numPoints = 1;
 		int pointsLeft = 0;
+
 		glm::vec2 currPos = seed->m_Pos;
 		glm::vec2 currPixPos = currPos * m_ViewportSize;
 		linePoints.push_back(currPos);
+		dir = m_CurvatureData->Sample(currPos);
 		
 		//extrude left
 		while (!HasCollision(currPos) && pointsLeft < maxPoints) {
-			dir = glm::normalize(dir + dirChange);
-			dirChange = glm::vec2(dir.y, -dir.x) * seed->m_Importance;
+			sampleDir = glm::vec2(m_CurvatureData->Sample(currPos));
+			if (glm::dot(dir, sampleDir) >= 0) dir = sampleDir;
+			else dir = -sampleDir;
+
 			AddCollisionPoint(currPos);
 			currPixPos = currPixPos + (LINE_SEPARATION_DISTANCE * dir);
 			currPos = currPixPos / m_ViewportSize;
@@ -199,16 +209,17 @@ namespace Copperplate {
 			pointsLeft++;
 		}
 
-		currPixPos = seed->m_Pos * m_ViewportSize + (LINE_SEPARATION_DISTANCE * glm::vec2(1.0f, 0.0f));
+		dir = -glm::vec2(m_CurvatureData->Sample(seed->m_Pos));
+		currPixPos = seed->m_Pos * m_ViewportSize + (LINE_SEPARATION_DISTANCE * dir);
 		currPos = currPixPos / m_ViewportSize;
 		linePoints.push_back(currPos);
 		numPoints++;
-		dir = glm::vec2(1.0f, 0.0f);
-		dirChange = glm::vec2(dir.y, -dir.x) * seed->m_Importance;
 		//extrude right
 		while (!HasCollision(currPos) && numPoints < maxPoints*2 + 1) {
-			dir = glm::normalize(dir + dirChange);
-			dirChange = glm::vec2(dir.y, -dir.x) * seed->m_Importance;
+			sampleDir = glm::vec2(m_CurvatureData->Sample(currPos));
+			if (glm::dot(dir, sampleDir) >= 0) dir = sampleDir;
+			else dir = -sampleDir;
+
 			AddCollisionPoint(currPos);
 			currPixPos = currPixPos + (LINE_SEPARATION_DISTANCE * dir);
 			currPos = currPixPos / m_ViewportSize;
@@ -312,6 +323,9 @@ namespace Copperplate {
 	}
 
 	void Hatching::AddCollisionPoint(glm::vec2 screenPos) {
+		if (screenPos.x <= 0.0f || screenPos.x > 1.0f || screenPos.y <= 0.0f || screenPos.y > 1.0f)
+			return;
+
 		std::vector<glm::vec2>& gridCell = *GetCollisionPoints(ScreenPosToGridPos(screenPos));
 		gridCell.push_back(screenPos);
 	}

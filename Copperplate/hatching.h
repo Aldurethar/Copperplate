@@ -2,11 +2,12 @@
 
 #include "mesh.h"
 #include <unordered_set>
+#include "image.h"
 
 namespace Copperplate {
 
-	const float LINE_SEPARATION_DISTANCE = 12.0f;
-	const float LINE_TEST_DISTANCE = 8.0f;
+	const float LINE_SEPARATION_DISTANCE = 8.0f;
+	const float LINE_TEST_DISTANCE = 4.0f;
 
 	struct SeedPoint {
 		glm::vec3 m_Pos;
@@ -24,6 +25,7 @@ namespace Copperplate {
 		int m_LeftPoints;
 		std::vector<glm::vec2> m_Points;
 	};
+
 	class Hatching {
 	public:
 		
@@ -31,8 +33,11 @@ namespace Copperplate {
 
 		void ResetSeeds();
 		void ResetHatching();
+
 		void AddContourCollision(const std::vector<glm::vec2>& contourSegments);
 		void AddSeeds(const std::vector<ScreenSpaceSeed>& seeds);
+		void GrabCurvatureData();
+
 		void CreateHatchingLines();
 		void DrawHatchingLines();
 
@@ -55,6 +60,8 @@ namespace Copperplate {
 
 		glm::ivec2 m_GridSize;
 		std::vector<std::vector<glm::vec2>> m_CollisionPoints;
+
+		Unique<Image> m_CurvatureData;
 
 		unsigned int m_LinesVAO;
 		unsigned int m_LinesVertexBuffer;

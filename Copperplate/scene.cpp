@@ -255,6 +255,7 @@ namespace Copperplate {
 		m_Renderer->SwitchFrameBuffer(FB_Curvature, true);
 		glCheckError();
 		DrawFullScreen(SH_Curvature, FB_Normals);
+		m_Hatching->GrabCurvatureData();
 
 		//Draw the Objects
 		m_Renderer->SwitchFrameBuffer(FB_Default, true);

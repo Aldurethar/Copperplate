@@ -8,6 +8,7 @@ set(SOURCE_LIST
 	shader.h shader.cpp
 	rendering.h rendering.cpp
 	hatching.h hatching.cpp
+	image.h image.cpp
 	shaders/flatcolor.vert
 	shaders/flatcolor.frag
 	shaders/contours.vert
