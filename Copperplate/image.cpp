@@ -15,7 +15,7 @@ namespace Copperplate {
 	}
 
 	glm::vec4 Image::Sample(glm::vec2 uvPos) {
-		glm::vec2 pixPos = uvPos * glm::vec2(m_Size);
+		glm::vec2 pixPos = uvPos * (glm::vec2(m_Size) - glm::vec2(1.0f));
 		glm::vec2 fraction = glm::fract(pixPos);
 
 		glm::ivec2 samplePos = glm::ivec2(floor(pixPos.x), floor(pixPos.y));

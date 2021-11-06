@@ -9,7 +9,7 @@
 
 namespace Copperplate {
 
-	const int SEEDS_PER_OBJECT = 3000;
+	const int SEEDS_PER_OBJECT = 5000;
 	const int MAX_SEEDS_PER_FACE = 50;
 	const float Z_MIN = 0.1f;
 	const float Z_MAX = 50.0f;
@@ -18,7 +18,7 @@ namespace Copperplate {
 	class SceneObject {
 	public:
 
-		SceneObject(std::string meshFile, Shared<Shader> shader);
+		SceneObject(std::string meshFile, Shared<Shader> shader, int id, Shared<Hatching> hatching);
 
 		void Draw();
 
@@ -30,10 +30,8 @@ namespace Copperplate {
 		void DrawSeedPoints();
 
 		void TransformSeedPoints(Shared<ComputeShader> shader);
-
-		void DrawScreenSeeds();
-
-		std::vector<ScreenSpaceSeed>& GetScreenSeeds();
+		
+		int getId();
 		std::vector<glm::vec2>& GetContourSegments();
 
 		void Move(glm::vec3 translation);
@@ -44,16 +42,15 @@ namespace Copperplate {
 
 		Unique<Mesh> m_Mesh;
 		Shared<Shader> m_Shader;
+		Shared<Hatching> m_Hatching;
+		int m_Id;
 		glm::mat4 m_Transform;
 		std::vector<SeedPoint> m_SeedPoints;
-		std::vector<ScreenSpaceSeed> m_ScreenSpaceSeeds;
 		std::vector<glm::vec2> m_ContourSegments;
 
 		unsigned int m_SeedsVAO;
 		unsigned int m_SeedsVertexBuffer;
 		unsigned int m_SeedsSSBO;
-		unsigned int m_ScreenSeedsVAO;
-		unsigned int m_ScreenSeedsVBO;
 		unsigned int m_ContoursFeedbackBuffer;
 		unsigned int m_ContoursVAO;
 		unsigned int m_ContoursVBO;
@@ -96,14 +93,14 @@ namespace Copperplate {
 		void DrawContours(const Unique<SceneObject>& object,  glm::vec3 color);
 		void DrawSeedPoints(const Unique<SceneObject>& object, glm::vec3 color, float pointSize);
 		void TransformSeedPoints(const Unique<SceneObject>& object);
-		void DrawScreenSeeds(const Unique<SceneObject>& object, glm::vec3 color, float pointSize);
 		void DrawFramebufferContent(EFramebuffers framebuffer);
 		void DrawFramebufferAlpha(EFramebuffers framebuffer);
 		void DrawFullScreen(EShaders shader, EFramebuffers sourceTex);
+		void DrawScreenSeeds(glm::vec3 color, float pointSize);
 		void DrawHatchingLines(EShaders shader, glm::vec3 color);
 
 		Unique<Renderer> m_Renderer;
-		Unique<Hatching> m_Hatching;
+		Shared<Hatching> m_Hatching;
 		Unique<Camera> m_Camera;
 		std::map<EShaders, Shared<Shader>> m_Shaders;
 		std::map<EShaders, Shared<ComputeShader>> m_ComputeShaders;

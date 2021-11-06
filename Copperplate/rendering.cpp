@@ -24,7 +24,8 @@ namespace Copperplate {
 	bool DisplaySettings::RenderHatching = true;
 	bool DisplaySettings::RenderCurrentDebug = true;
 	int DisplaySettings::NumHatchingLines = 3;
-	int DisplaySettings::NumPointsPerHatch = 3;
+	int DisplaySettings::NumPointsPerHatch = -1;
+	EHatchingDirections DisplaySettings::HatchingDirection = EHatchingDirections::HD_LargestCurvature;
 	EFramebuffers DisplaySettings::FramebufferToDisplay = EFramebuffers::FB_Default;
 
 

@@ -99,6 +99,18 @@ namespace Copperplate {
 		else if (key == GLFW_KEY_4) {
 			DisplaySettings::FramebufferToDisplay = EFramebuffers::FB_Curvature;
 		}
+		else if (key == GLFW_KEY_F1) {
+			DisplaySettings::HatchingDirection = EHatchingDirections::HD_LargestCurvature;
+		}
+		else if (key == GLFW_KEY_F2) {
+			DisplaySettings::HatchingDirection = EHatchingDirections::HD_SmallestCurvature;
+		}
+		else if (key == GLFW_KEY_F3) {
+			DisplaySettings::HatchingDirection = EHatchingDirections::HD_Normal;
+		}
+		else if (key == GLFW_KEY_F4) {
+			DisplaySettings::HatchingDirection = EHatchingDirections::HD_Tangent;
+		}
 
 		// General Window input
 		else if (key == GLFW_KEY_ESCAPE) {

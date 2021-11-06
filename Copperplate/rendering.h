@@ -91,6 +91,13 @@ namespace Copperplate {
 
 	};
 
+	enum EHatchingDirections {
+		HD_LargestCurvature,
+		HD_SmallestCurvature,
+		HD_Normal,
+		HD_Tangent,
+	};
+
 	//DISPLAY SETTINGS CLASS
 	class DisplaySettings {
 	public:
@@ -101,6 +108,7 @@ namespace Copperplate {
 		static bool RenderCurrentDebug;
 		static int NumHatchingLines;
 		static int NumPointsPerHatch;
+		static EHatchingDirections HatchingDirection;
 		static EFramebuffers FramebufferToDisplay;
 	};
 

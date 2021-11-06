@@ -6,35 +6,42 @@
 namespace Copperplate {
 
 	struct OutputSeed {
-		glm::vec2 pos;
-		float importance;
-		int keep;
+		glm::vec2 pos;		//8 Bytes, total 8
+		float importance;	//4 Bytes, total 12
+		float id;			//4 Bytes, total 16
+		int keep;			//4 Bytes, total 20
+		int padding1;		//4 bytes
+		int padding2;		//4 bytes
+		int padding3;		//4 bytes, total 32
 	};
 
 	//SCENEOBJECT IMPLEMENTATION
-	SceneObject::SceneObject(std::string meshFile, Shared<Shader> shader) {
+	SceneObject::SceneObject(std::string meshFile, Shared<Shader> shader, int id, Shared<Hatching> hatching) {
 		m_Mesh = MeshCreator::ImportMesh(meshFile);
 		m_Shader = shader;
+		m_Id = id;
+		m_Hatching = hatching;
 		m_Transform = glm::mat4(1.0f);
 
 		//Create Seed Points for Hatching Strokes
 		m_SeedPoints = std::vector<SeedPoint>();
 		m_SeedPoints.reserve(SEEDS_PER_OBJECT);
-		CreateSeedPoints(m_SeedPoints, *m_Mesh, SEEDS_PER_OBJECT, MAX_SEEDS_PER_FACE);
-
-		m_ScreenSpaceSeeds = std::vector<ScreenSpaceSeed>();
-		m_ScreenSpaceSeeds.reserve(m_SeedPoints.size());
+		m_Hatching->CreateSeedPoints(m_SeedPoints, *m_Mesh, m_Id, SEEDS_PER_OBJECT, MAX_SEEDS_PER_FACE);
 
 		m_ContourSegments = std::vector<glm::vec2>();
 		m_ContourSegments.reserve(m_Mesh->GetFaces().size() * 3 * 2);
 
 		std::vector<float> seedsData;
-		seedsData.reserve(4 * m_SeedPoints.size());
+		seedsData.reserve(8 * m_SeedPoints.size());
 		for (SeedPoint sp : m_SeedPoints) {
 			seedsData.push_back(sp.m_Pos.x);
 			seedsData.push_back(sp.m_Pos.y);
 			seedsData.push_back(sp.m_Pos.z);
+			seedsData.push_back(1.0f);	//padding
 			seedsData.push_back(sp.m_Importance);
+			seedsData.push_back(sp.m_Id);
+			seedsData.push_back(1.0f);	//padding
+			seedsData.push_back(1.0f);	//padding
 		}
 
 		//Setup OpenGL Buffers
@@ -46,10 +53,14 @@ namespace Copperplate {
 		glBindBuffer(GL_ARRAY_BUFFER, m_SeedsVertexBuffer);
 		glBufferData(GL_ARRAY_BUFFER, seedsData.size() * sizeof(float), seedsData.data(), GL_STATIC_DRAW);
 
+		int stride = 8 * sizeof(float);
+
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (GLvoid*)0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (GLvoid*)0);
 		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (GLvoid*)(3 * sizeof(float)));
+		glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, stride, (GLvoid*)(4 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, stride, (GLvoid*)(5 * sizeof(float)));
 		glEnableVertexAttribArray(0);
 
 		glCheckError();
@@ -61,20 +72,7 @@ namespace Copperplate {
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_SeedsSSBO);
 		glBufferData(GL_SHADER_STORAGE_BUFFER, numOutputs * sizeof(struct OutputSeed), NULL, GL_DYNAMIC_READ);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-		//Screen Space Seed Points
-		glGenVertexArrays(1, &m_ScreenSeedsVAO);
-		glGenBuffers(1, &m_ScreenSeedsVBO);
-
-		glBindVertexArray(m_ScreenSeedsVAO);
-		glBindBuffer(GL_ARRAY_BUFFER, m_ScreenSeedsVBO);
-		glBufferData(GL_ARRAY_BUFFER, m_SeedPoints.size() * 3 * sizeof(float), NULL, GL_DYNAMIC_DRAW);
-
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (GLvoid*)0);
-
-		glCheckError();
-
+		
 		//Transform Feedback Buffer for Contour Segments
 		m_Mesh->Bind();
 		glGenBuffers(1, &m_ContoursFeedbackBuffer);
@@ -135,6 +133,8 @@ namespace Copperplate {
 			m_ContourSegments.push_back(feedback[2 * i]);
 			m_ContourSegments.push_back(feedback[2 * i + 1]);
 		}
+
+		m_Hatching->AddContourCollision(m_ContourSegments);
 		
 		delete[] feedback;
 	}
@@ -174,30 +174,19 @@ namespace Copperplate {
 		OutputSeed* outputs{ new OutputSeed[numOutputs]{} };
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_SeedsSSBO);
 		glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, numOutputs * sizeof(struct OutputSeed), outputs);
-		
-		m_ScreenSpaceSeeds.clear();
+				
 		for (int i = 0; i < numOutputs; i++) {
-			if (outputs[i].keep) {
-				ScreenSpaceSeed seed = { outputs[i].pos, outputs[i].importance };
-				m_ScreenSpaceSeeds.push_back(seed);
-			}
+			OutputSeed oSeed = outputs[i];
+			unsigned int id = (m_Id << 16) + (int)oSeed.id;
+			m_Hatching->UpdateScreenSeed(id, oSeed.pos, oSeed.keep);
 		}
 		delete[] outputs;
-		//std::cout << m_ScreenSpaceSeeds.size() << "Screen Space Seeds \n";
 	}
-
-	void SceneObject::DrawScreenSeeds()	{
-		m_Shader->Use();
-		glBindVertexArray(m_ScreenSeedsVAO);
-		glBindBuffer(GL_ARRAY_BUFFER, m_ScreenSeedsVBO);
-		glBufferData(GL_ARRAY_BUFFER, m_SeedPoints.size() * 3 * sizeof(float), m_ScreenSpaceSeeds.data(), GL_STREAM_DRAW);
-		glDrawArrays(GL_POINTS, 0, m_ScreenSpaceSeeds.size());
+	
+	int SceneObject::getId() {
+		return m_Id;
 	}
-
-	std::vector<ScreenSpaceSeed>& SceneObject::GetScreenSeeds()	{
-		return m_ScreenSpaceSeeds;
-	}
-
+	
 	std::vector<glm::vec2>& SceneObject::GetContourSegments() {
 		return m_ContourSegments;
 	}
@@ -211,7 +200,7 @@ namespace Copperplate {
 	Scene::Scene(Shared<Window> window) {
 		m_Camera = CreateUnique<Camera>(window->GetWidth(), window->GetHeight());
 		m_Renderer = CreateUnique<Renderer>(window);
-		m_Hatching = CreateUnique<Hatching>(window->GetWidth(), window->GetHeight());
+		m_Hatching = CreateShared<Hatching>(window->GetWidth(), window->GetHeight());
 
 		//Setup the shaders
 		m_Shaders = std::map<EShaders, Shared<Shader>>();
@@ -219,10 +208,13 @@ namespace Copperplate {
 		CreateShaders();
 		
 		//Create the Scene Objects
+		int numObjects = 1;
 		m_SceneObjects = std::vector<Unique<SceneObject>>();
-		//m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSmooth.obj", m_Shaders[SH_Contours]));
+		//m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSmooth.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
+		//numObjects++;
 		//m_SceneObjects[0]->Move(glm::vec3(3.0f, 0.0f, 0.0f));
-		m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSubdiv.obj", m_Shaders[SH_Contours]));
+		m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSubdiv.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
+		numObjects++;
 
 	}
 
@@ -231,8 +223,7 @@ namespace Copperplate {
 		UpdateUniforms();
 
 		//Reset Hatching
-		m_Hatching->ResetSeeds();
-		m_Hatching->ResetHatching();
+		m_Hatching->ResetCollisions();
 
 		//Fill Framebuffers
 		//Normals
@@ -241,6 +232,7 @@ namespace Copperplate {
 		for (auto& object : m_SceneObjects) {
 			DrawObject(object, SH_Normals);
 		}
+		m_Hatching->GrabNormalData();
 		//if(DisplaySettings::RenderCurrentDebug)
 		//	DrawFullScreen(SH_SphereNormals, FB_Default); 
 
@@ -263,22 +255,23 @@ namespace Copperplate {
 		for (auto& object : m_SceneObjects) {			
 			DrawFlatColor(object, glm::vec3(1.0f));
 			ExtractContours(object);
-			m_Hatching->AddContourCollision(object->GetContourSegments());
 			TransformSeedPoints(object);
-			m_Hatching->AddSeeds(object->GetScreenSeeds());
 			if (DisplaySettings::RenderContours) 
 				DrawContours(object, glm::vec3(0.0f));
 			if (DisplaySettings::RenderSeedPoints) 
 				DrawSeedPoints(object, glm::vec3(0.89f, 0.37f, 0.27f), 8.0f);
-			if (DisplaySettings::RenderScreenSpaceSeeds) 
-				DrawScreenSeeds(object, glm::vec3(0.13f, 0.67f, 0.27f), 4.0f); 
 		}
+
 		m_Hatching->CreateHatchingLines();
+
+		if (DisplaySettings::RenderScreenSpaceSeeds)
+			DrawScreenSeeds(glm::vec3(0.13f, 0.67f, 0.27f), 4.0f);
 		if (DisplaySettings::RenderHatching) 
 			DrawHatchingLines(SH_HatchingLines, glm::vec3(0.16f, 0.37f, 0.74f));
 		
 		if (DisplaySettings::FramebufferToDisplay != EFramebuffers::FB_Default)
 			DrawFramebufferContent(DisplaySettings::FramebufferToDisplay);
+
 	}
 
 	void Scene::MoveCamera(float x, float y, float z) {
@@ -389,11 +382,11 @@ namespace Copperplate {
 		object->TransformSeedPoints(m_ComputeShaders[SH_TransformSeeds]);
 	}
 
-	void Scene::DrawScreenSeeds(const Unique<SceneObject>& object, glm::vec3 color, float pointSize)	{
-		object->SetShader(m_Shaders[SH_Screenpoints]);
+	void Scene::DrawScreenSeeds(glm::vec3 color, float pointSize)	{
+		m_Shaders[SH_Screenpoints]->Use();
 		m_Shaders[SH_Screenpoints]->SetVec3("color", color);
 		glPointSize(pointSize);
-		object->DrawScreenSeeds();
+		m_Hatching->DrawScreenSeeds();
 	}
 
 	void Scene::DrawFramebufferContent(EFramebuffers framebuffer) {

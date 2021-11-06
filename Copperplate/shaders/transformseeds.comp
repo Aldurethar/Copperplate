@@ -1,13 +1,19 @@
 #version 460 core
 struct inputSeed{
-	vec3 pos;
-	float importance;
+	vec4 pos;			//16 bytes
+	float importance;	//4 bytes
+	float id;			//4 bytes
+	vec2 padding;		//8 bytes, total 32
 };
 
 struct outputSeed{
-	vec2 pos;
-	float importance;
-	int keep;
+	vec2 pos;			//8 bytes
+	float importance;	//4 bytes
+	float id;			//4 bytes
+	int keep;			//4 bytes
+	int padding1;		//4 bytes
+	int padding2;		//4 bytes
+	int padding3;		//4 bytes, total 32
 };
 
 layout(std140, binding = 0) buffer seedsIn {
@@ -34,7 +40,8 @@ void main(){
 	uint gid = gl_GlobalInvocationID.x;
 
 	if (gid < numSeeds){
-		vec4 clipPos = projection * view * model * vec4(iSeeds[gid].pos, 1.0);
+		//vec4 clipPos = projection * view * model * vec4(iSeeds[gid].pos, 1.0);
+		vec4 clipPos = projection * view * model * iSeeds[gid].pos;
 		vec2 screenPos = ((clipPos.xy / clipPos.w) * 0.5) + vec2(0.5);
 		int inbounds = 1;
 		if(screenPos.x < 0.0 || screenPos.x > 1.0) inbounds = 0;
@@ -49,10 +56,12 @@ void main(){
 
 		oSeeds[gid].pos = screenPos;
 		oSeeds[gid].importance = iSeeds[gid].importance;
+		oSeeds[gid].id = iSeeds[gid].id;
 		oSeeds[gid].keep = keep * inbounds;
 	} else {
 		oSeeds[gid].pos = vec2(0.0);
 		oSeeds[gid].importance = 0.0;
+		oSeeds[gid].id = 0.0;
 		oSeeds[gid].keep = 0;
 	}
 }
