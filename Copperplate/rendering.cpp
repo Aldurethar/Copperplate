@@ -22,9 +22,12 @@ namespace Copperplate {
 	bool DisplaySettings::RenderSeedPoints = false;
 	bool DisplaySettings::RenderScreenSpaceSeeds = false;
 	bool DisplaySettings::RenderHatching = true;
+	bool DisplaySettings::OnlyUpdateHatchLines = false;
 	bool DisplaySettings::RenderCurrentDebug = true;
 	int DisplaySettings::NumHatchingLines = 3;
 	int DisplaySettings::NumPointsPerHatch = -1;
+	float DisplaySettings::LineSeparationDistance = 8.0f;
+	float DisplaySettings::LineTestDistance = 4.0f;
 	EHatchingDirections DisplaySettings::HatchingDirection = EHatchingDirections::HD_LargestCurvature;
 	EFramebuffers DisplaySettings::FramebufferToDisplay = EFramebuffers::FB_Default;
 
