@@ -22,11 +22,12 @@ namespace Copperplate {
 		m_Id = id;
 		m_Hatching = hatching;
 		m_Transform = glm::mat4(1.0f);
+		m_PrevTransform = m_Transform;
 
 		//Create Seed Points for Hatching Strokes
 		m_SeedPoints = std::vector<SeedPoint>();
 		m_SeedPoints.reserve(SEEDS_PER_OBJECT);
-		m_Hatching->CreateSeedPoints(m_SeedPoints, *m_Mesh, m_Id, SEEDS_PER_OBJECT, MAX_SEEDS_PER_FACE);
+		m_Hatching->CreateSeedPoints(m_SeedPoints, *m_Mesh, m_Id, SEEDS_PER_OBJECT);
 
 		m_ContourSegments = std::vector<glm::vec2>();
 		m_ContourSegments.reserve(m_Mesh->GetFaces().size() * 3 * 2);
@@ -98,9 +99,14 @@ namespace Copperplate {
 	void SceneObject::Draw() {
 		m_Shader->SetMat4("model", m_Transform);
 		m_Shader->SetMat4("modelInvTrans", glm::transpose(glm::inverse(m_Transform)));
+		m_Shader->SetMat4("prevModel", m_PrevTransform);
 		glCheckError();
 		m_Shader->Use();
 		m_Mesh->Draw();
+	}
+
+	void SceneObject::Update() {
+		m_PrevTransform = m_Transform;
 	}
 
 	void SceneObject::ExtractContours() {
@@ -213,14 +219,21 @@ namespace Copperplate {
 		//m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSmooth.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
 		//numObjects++;
 		//m_SceneObjects[0]->Move(glm::vec3(3.0f, 0.0f, 0.0f));
+		//m_SceneObjects.push_back(CreateUnique<SceneObject>("Blob.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
 		m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSubdiv.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
 		numObjects++;
 
 	}
 
 	void Scene::Draw() {
+		// Update Scene Objects
+		for (auto& object : m_SceneObjects) {
+			object->Update();
+		}
+
 		//Update Shader Uniforms
 		UpdateUniforms();
+		m_Camera->Update();
 
 		//Reset Hatching
 		m_Hatching->ResetCollisions();
@@ -242,6 +255,14 @@ namespace Copperplate {
 		for (auto& object : m_SceneObjects) {
 			DrawObject(object, SH_Depth);
 		}
+
+		//Movement
+		m_Renderer->SwitchFrameBuffer(FB_Movement, true);
+		glCheckError();
+		for (auto& object : m_SceneObjects) {
+			DrawObject(object, SH_Movement);
+		}
+		m_Hatching->GrabMovementData();
 
 		//Curvature
 		m_Renderer->SwitchFrameBuffer(FB_Curvature, true);
@@ -319,6 +340,9 @@ namespace Copperplate {
 
 		Shared<Shader> sphereNormals = CreateShared<Shader>(ST_VertFrag, "shaders/spherenormals.vert", nullptr, "shaders/spherenormals.frag");
 		m_Shaders[SH_SphereNormals] = sphereNormals;
+
+		Shared<Shader> movement = CreateShared<Shader>(ST_VertFrag, "shaders/movement.vert", nullptr, "shaders/movement.frag");
+		m_Shaders[SH_Movement] = movement;
 	}
 
 	void Scene::UpdateUniforms() {
@@ -334,7 +358,10 @@ namespace Copperplate {
 		m_Shaders[SH_Normals]->SetFloat("zMax", Z_MAX);
 		m_Shaders[SH_Depth]->SetMat4("view", m_Camera->GetViewMatrix());
 		m_Shaders[SH_Depth]->SetMat4("projection", m_Camera->GetProjectionMatrix());
-		m_Shaders[SH_Curvature]->SetFloat("sigma", 2.6f);
+		m_Shaders[SH_Curvature]->SetFloat("sigma", 3.3f);
+		m_Shaders[SH_Movement]->SetMat4("view", m_Camera->GetViewMatrix());
+		m_Shaders[SH_Movement]->SetMat4("projection", m_Camera->GetProjectionMatrix());
+		m_Shaders[SH_Movement]->SetMat4("prevView", m_Camera->GetPrevViewMatrix());
 		m_ComputeShaders[SH_TransformSeeds]->SetMat4("view", m_Camera->GetViewMatrix());
 		m_ComputeShaders[SH_TransformSeeds]->SetMat4("projection", m_Camera->GetProjectionMatrix());
 		glCheckError();

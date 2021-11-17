@@ -4,6 +4,7 @@
 
 #include <random>
 #include <queue>
+#include <glm\detail\func_geometric.inl>
 
 namespace Copperplate {
 
@@ -44,7 +45,7 @@ namespace Copperplate {
 	glm::vec2 cartesianToPolar(glm::vec2 vec) {
 		float a = acos(vec.x);
 		if (vec.y < 0) a = TWOPI - a;
-		return glm::vec2(vec.length(), a);
+		return glm::vec2(glm::length(vec), a);
 	}
 
 	glm::vec2 polarToCartesian(glm::vec2 polVec) {

@@ -9,8 +9,7 @@
 
 namespace Copperplate {
 
-	const int SEEDS_PER_OBJECT = 5000;
-	const int MAX_SEEDS_PER_FACE = 50;
+	const int SEEDS_PER_OBJECT = 8000;
 	const float Z_MIN = 0.1f;
 	const float Z_MAX = 50.0f;
 	const int COMPUTE_GROUPSIZE = 128;
@@ -21,6 +20,8 @@ namespace Copperplate {
 		SceneObject(std::string meshFile, Shared<Shader> shader, int id, Shared<Hatching> hatching);
 
 		void Draw();
+
+		void Update();
 
 		void ExtractContours();
 		void DrawContours();
@@ -45,6 +46,7 @@ namespace Copperplate {
 		Shared<Hatching> m_Hatching;
 		int m_Id;
 		glm::mat4 m_Transform;
+		glm::mat4 m_PrevTransform;
 		std::vector<SeedPoint> m_SeedPoints;
 		std::vector<glm::vec2> m_ContourSegments;
 
@@ -70,6 +72,7 @@ namespace Copperplate {
 		SH_Screenpoints,
 		SH_HatchingLines,
 		SH_SphereNormals,
+		SH_Movement,
 	};
 
 	class Scene {

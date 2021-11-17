@@ -16,6 +16,7 @@ namespace Copperplate {
 	const glm::vec4 NORMAL_CLEARCOLOR = glm::vec4(0.0f);
 	const glm::vec4 DEPTH_CLEARCOLOR = glm::vec4(100.0f, 1.0f, 1.0f, 0.0f);
 	const glm::vec4 CURVATURE_CLEARCOLOR = glm::vec4(0.0f);
+	const glm::vec4 MOVEMENT_CLEARCOLOR = glm::vec4(0.0f);
 
 	// Display Settings
 	bool DisplaySettings::RenderContours = true;
@@ -23,8 +24,8 @@ namespace Copperplate {
 	bool DisplaySettings::RenderScreenSpaceSeeds = false;
 	bool DisplaySettings::RenderHatching = true;
 	bool DisplaySettings::OnlyUpdateHatchLines = false;
-	bool DisplaySettings::RenderCurrentDebug = true;
-	int DisplaySettings::NumHatchingLines = 3;
+	bool DisplaySettings::RenderCurrentDebug = false;
+	int DisplaySettings::NumHatchingLines = -1;
 	int DisplaySettings::NumPointsPerHatch = -1;
 	float DisplaySettings::LineSeparationDistance = 8.0f;
 	float DisplaySettings::LineTestDistance = 4.0f;
@@ -101,6 +102,11 @@ namespace Copperplate {
 
 		CalculateViewMatrix();
 		SetViewportSize(width, height);
+		Update();
+	}
+
+	void Camera::Update() {
+		m_PrevViewMatrix = m_ViewMatrix;
 	}
 
 	void Camera::CalculateViewMatrix() {
@@ -155,6 +161,10 @@ namespace Copperplate {
 
 	glm::mat4 Camera::GetProjectionMatrix() {
 		return m_ProjectionMatrix;
+	}
+
+	glm::mat4 Camera::GetPrevViewMatrix() {
+		return m_PrevViewMatrix;
 	}
 
 	glm::vec3 Camera::GetForwardVector() {
@@ -286,6 +296,38 @@ namespace Copperplate {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		m_Framebuffers[FB_Curvature] = curvature;
+
+		// Movement Framebuffer
+		FrameBuffer movement;
+		movement.m_ClearColor = MOVEMENT_CLEARCOLOR;
+		movement.m_ClearFlags = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT;
+		glGenFramebuffers(1, &movement.m_FBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, movement.m_FBO);
+
+		glGenTextures(1, &movement.m_Texture);
+		glBindTexture(GL_TEXTURE_2D, movement.m_Texture);
+
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, m_Window->GetWidth(), m_Window->GetHeight(), 0, GL_RG, GL_SHORT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, movement.m_Texture, 0);
+
+		glCheckError();
+
+		glGenRenderbuffers(1, &rbo);
+		glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, m_Window->GetWidth(), m_Window->GetHeight());
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+		glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+		glCheckError();
+		glCheckFrameBufferError();
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		m_Framebuffers[FB_Movement] = movement;
 
 	}
 

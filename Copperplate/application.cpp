@@ -118,6 +118,9 @@ namespace Copperplate {
 		else if (key == GLFW_KEY_4) {
 			DisplaySettings::FramebufferToDisplay = EFramebuffers::FB_Curvature;
 		}
+		else if (key == GLFW_KEY_5) {
+			DisplaySettings::FramebufferToDisplay = EFramebuffers::FB_Movement;
+		}
 		else if (key == GLFW_KEY_F1) {
 			DisplaySettings::HatchingDirection = EHatchingDirections::HD_LargestCurvature;
 		}

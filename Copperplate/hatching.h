@@ -1,5 +1,5 @@
 #pragma once
-
+#include "hatchingline.h"
 #include "mesh.h"
 #include <unordered_set>
 #include <map>
@@ -7,8 +7,6 @@
 
 namespace Copperplate {
 
-	//const float LINE_SEPARATION_DISTANCE = 8.0f;
-	//const float LINE_TEST_DISTANCE = 4.0f;
 
 	struct SeedPoint {
 		glm::vec3 m_Pos;
@@ -24,11 +22,10 @@ namespace Copperplate {
 		bool m_Visible;
 	};
 
-	struct HatchingLine {
-		int m_NumPoints;
-		int m_LeftPoints;
-		std::vector<glm::vec2> m_Points;
-		std::vector<ScreenSpaceSeed*> m_AssociatedSeeds;
+	struct CollisionPoint {
+		glm::vec2 m_Pos;
+		bool m_isContour;
+		HatchingLine* m_Line;
 	};
 	
 
@@ -37,7 +34,7 @@ namespace Copperplate {
 		
 		Hatching(int viewportWidth, int viewportHeight);
 	
-		void CreateSeedPoints(std::vector<SeedPoint>& outSeedPoints, Mesh& mesh, unsigned int objectId, int totalPoints, int maxPointsPerFace);
+		void CreateSeedPoints(std::vector<SeedPoint>& outSeedPoints, Mesh& mesh, unsigned int objectId, int totalPoints);
 
 		void ResetCollisions();
 
@@ -51,40 +48,45 @@ namespace Copperplate {
 		
 		void GrabNormalData();
 		void GrabCurvatureData();
+		void GrabMovementData();
 
 	private:
 
 		void UpdateHatchingLines();
+		void SnakesDelete();
+
 
 		void PrepareForHatching();
 		bool FindSeedCandidate(ScreenSpaceSeed*& out, HatchingLine currentLine);
-		HatchingLine CreateLine(ScreenSpaceSeed* seed, int prevNumPoints, int prevLeftPoints);
-		void AddCollisionPoint(glm::vec2 screenPos);
+		HatchingLine CreateLine(ScreenSpaceSeed* seed);
+		void AddLineCollision(HatchingLine* line);
+		void AddCollisionPoint(glm::vec2 screenPos, bool isContour, HatchingLine* line);
 
 		void FillGLBuffers();
 		void UpdateScreenSeedIdMap();
 		
-		std::vector<glm::vec2>* GetCollisionPoints(glm::ivec2 gridPos);
+		std::vector<CollisionPoint>* GetCollisionPoints(glm::ivec2 gridPos);
 		std::unordered_set<ScreenSpaceSeed*>* GetUnusedScreenSeeds(glm::ivec2 gridPos);
 
-		bool HasCollision(glm::vec2 screenPos);
+		bool HasCollision(glm::vec2 screenPos, bool onlyContours);
 		glm::vec2 GetHatchingDir(glm::vec2 screenPos);
 		ScreenSpaceSeed* FindNearbySeed(glm::vec2 screenPos, float maxDistance);
 		ScreenSpaceSeed* GetScreenSeedById(unsigned int id);
 		glm::ivec2 ScreenPosToGridPos(glm::vec2 screenPos);
 
 		glm::vec2 m_ViewportSize;
-		std::vector<HatchingLine> m_HatchingLines;
+		std::list<HatchingLine> m_HatchingLines;
 
 		std::vector<ScreenSpaceSeed> m_ScreenSeeds;
 		std::map<unsigned int, ScreenSpaceSeed*> m_ScreenSeedIdMap;
 		
 		glm::ivec2 m_GridSize;
 		std::vector<std::unordered_set<ScreenSpaceSeed*>> m_UnusedScreenSeeds;
-		std::vector<std::vector<glm::vec2>> m_CollisionPoints;
+		std::vector<std::vector<CollisionPoint>> m_CollisionPoints;
 
 		Unique<Image> m_NormalData;
 		Unique<Image> m_CurvatureData;
+		Unique<Image> m_MovementData;
 
 		unsigned int m_ScreenSeedsVAO;
 		unsigned int m_ScreenSeedsVBO;

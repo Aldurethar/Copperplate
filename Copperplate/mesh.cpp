@@ -211,7 +211,7 @@ namespace Copperplate {
 
 			glm::vec3 ab = b - a;
 			glm::vec3 ac = c - a;
-			area += glm::cross(ab, ac).length() * 0.5f;
+			area += glm::length(glm::cross(ab, ac)) * 0.5f;
 		}
 		return area;
 	}

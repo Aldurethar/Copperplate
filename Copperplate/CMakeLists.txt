@@ -8,6 +8,7 @@ set(SOURCE_LIST
 	shader.h shader.cpp
 	rendering.h rendering.cpp
 	hatching.h hatching.cpp
+	hatchingline.h hatchingline.cpp
 	image.h image.cpp
 	utility.h utility.cpp
 	shaders/flatcolor.vert
@@ -31,6 +32,8 @@ set(SOURCE_LIST
 	shaders/depth.frag
 	shaders/hatchinglines.vert
 	shaders/hatchinglines.frag
+	shaders/movement.vert
+	shaders/movement.frag
 	shaders/spherenormals.vert
 	shaders/spherenormals.frag
 )

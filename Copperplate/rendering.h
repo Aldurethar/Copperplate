@@ -33,12 +33,14 @@ namespace Copperplate {
 	
 		Camera(int width, int height);
 
+		void Update();
 		void SetPosition(float azimuth, float height, float zoom);
 		void Move(float addAzimuth, float addHeight, float addZoom);
 		void SetViewportSize(int width, int height);
 
 		glm::mat4 GetViewMatrix();		
 		glm::mat4 GetProjectionMatrix();
+		glm::mat4 GetPrevViewMatrix();
 		glm::vec3 GetForwardVector();
 		
 	private:	
@@ -49,6 +51,7 @@ namespace Copperplate {
 		glm::vec3 m_Forward;
 		glm::mat4 m_ViewMatrix;
 		glm::mat4 m_ProjectionMatrix;
+		glm::mat4 m_PrevViewMatrix;
 
 		void CalculateViewMatrix();
 	
@@ -65,7 +68,8 @@ namespace Copperplate {
 		FB_Default,
 		FB_Normals,
 		FB_Depth,
-		FB_Curvature
+		FB_Curvature,
+		FB_Movement,
 	};
 
 	//RENDERER CLASS
