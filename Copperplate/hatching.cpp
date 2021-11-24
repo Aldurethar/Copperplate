@@ -8,6 +8,15 @@
 
 namespace Copperplate {
 
+	float Hatching::CoverRadius = DisplaySettings::LineTestDistance * 0.8f;
+	float Hatching::TrimRadius = DisplaySettings::LineTestDistance;
+	float Hatching::ExtendRadius = DisplaySettings::LineTestDistance * 1.4f;
+	float Hatching::MergeRadius = DisplaySettings::LineTestDistance * 1.4f;
+	float Hatching::SplitAngle = degToRad(20);
+	float Hatching::CurvatureBreakAngle = degToRad(20);
+	float Hatching::CurvatureClampAngle = degToRad(5);
+	float Hatching::ParallelAngle = degToRad(10);
+
 	float getFaceArea(Face& face) {
 		glm::vec3 a = face.outer->origin->position;
 		glm::vec3 b = face.outer->next->origin->position;
@@ -146,7 +155,7 @@ namespace Copperplate {
 			glm::vec2 pixPos1 = contourSegments[i] * m_ViewportSize;
 			glm::vec2 pixPos2 = contourSegments[i + 1] * m_ViewportSize;
 			float length = glm::distance(pixPos1, pixPos2);
-			int steps = ceil(length / DisplaySettings::LineTestDistance);
+			int steps = ceil(length / (DisplaySettings::LineTestDistance * 0.8f));
 			for (int j = 0; j <= steps; j++) {
 				float p = j / (float)steps;
 				glm::vec2 pos = (1.0f - p) * contourSegments[i] + p * contourSegments[i+1];
@@ -158,8 +167,7 @@ namespace Copperplate {
 	void Hatching::CreateHatchingLines() {
 		PrepareForHatching();
 
-		HatchingLine currentLine;
-		std::queue<HatchingLine> linesQueue;
+		std::queue<HatchingLine*> linesQueue;
 
 		if (m_HatchingLines.size() == 0) {
 			//start with highest importance seed point
@@ -173,16 +181,17 @@ namespace Copperplate {
 			HatchingLine first = CreateLine(start);
 			AddLineCollision(&first);
 			m_HatchingLines.push_back(first);
-			linesQueue.push(first);
+			linesQueue.push(&m_HatchingLines.front());
 		}
 		else {
 			UpdateHatchingLines();
 			for (auto it = m_HatchingLines.begin(); it != m_HatchingLines.end(); it++) {
-				linesQueue.push(*it);
+				linesQueue.push(&(*it));
 			}
 		}
 
 		if (!DisplaySettings::OnlyUpdateHatchLines){
+			HatchingLine* currentLine = linesQueue.front();
 			//Algorithm from Jobard and Lefer, 1997
 			while (linesQueue.size() >= 1) {
 				currentLine = linesQueue.front();
@@ -190,7 +199,7 @@ namespace Copperplate {
 				if (FindSeedCandidate(candidate, currentLine)) {
 					HatchingLine newLine = CreateLine(candidate);
 					AddLineCollision(&newLine);
-					linesQueue.push(newLine);
+					linesQueue.push(&newLine);
 					m_HatchingLines.push_back(newLine);
 					//m_UnusedPoints.erase(candidate);
 					//CleanUnusedPoints();
@@ -199,6 +208,7 @@ namespace Copperplate {
 					linesQueue.pop();
 				}
 			}
+			DisplaySettings::OnlyUpdateHatchLines = true; 
 		}
 		FillGLBuffers();
 	}
@@ -232,20 +242,25 @@ namespace Copperplate {
 		if (DisplaySettings::RenderCurrentDebug) {
 			// Move Hatching Lines based on the Motion Field
 			for (HatchingLine& line : m_HatchingLines) {
-				for (int i = 0; i < line.m_Points.size(); i++) {
-					glm::vec2 point = line.m_Points[i];
+				std::deque<glm::vec2>& points = line.getPoints();
+				for (int i = 0; i < points.size(); i++) {
+					glm::vec2 point = points[i];
 					glm::vec2 movement = glm::vec2(m_MovementData->Sample(point));
-					line.m_Points[i] = point + movement;
+					points[i] = point + movement;
+				}
+				if (line.NeedsResampling()) {
+					line.Resample();
 				}
 			}
 			//TODO: Deform Lines slightly to ensure they follow the curvature
 
 			//Perform the Operations from Active Strokes
 			SnakesDelete();
+			SnakesSplit();
 			//TODO: the rest of the operators
 		}
 		else {
-			
+			/*
 			std::list<HatchingLine> newLines;
 			for (HatchingLine& line : m_HatchingLines) {
 				std::vector<ScreenSpaceSeed*> coveredSeeds;
@@ -279,85 +294,55 @@ namespace Copperplate {
 			}
 			m_HatchingLines.clear();
 			m_HatchingLines = newLines;
+			*/
 		}
 	}
 
 	void Hatching::SnakesDelete() {
 		for(auto it = m_HatchingLines.begin(); it != m_HatchingLines.end(); ) {
 			HatchingLine& line = *it;
-			int visibleSeeds = 0;
-			for (ScreenSpaceSeed* seed : line.m_AssociatedSeeds) {
-				if (seed->m_Visible) visibleSeeds++;
+			bool lineAlive = line.HasVisibleSeeds();
+			if (line.getPoints().size() <= 1) lineAlive = false;
+			
+			if (lineAlive) {
+				line.PruneFront();
+				lineAlive = line.HasVisibleSeeds();
+			}
+
+			if (lineAlive && line.HasMiddleCollision()) {
+				HatchingLine* rest = line.SplitFromCollision();
+				if(rest) m_HatchingLines.push_back(*rest);
+				lineAlive = line.HasVisibleSeeds();
+			}
+
+			if (lineAlive && line.HasMiddleOcclusion()) {
+				HatchingLine* rest = line.SplitFromOcclusion();
+				if(rest) m_HatchingLines.push_back(*rest);
+				lineAlive = line.HasVisibleSeeds();
+			}
+
+			if (lineAlive) {
+				line.PruneBack();
+				lineAlive = line.HasVisibleSeeds();
 			}
 
 			// Lines with no visible Seeds get removed
-			if (visibleSeeds == 0) {
+			if (!lineAlive) {
 				it = m_HatchingLines.erase(it);
-				continue;
 			}
 			else {
 				it++;
 			}
+		}
+	}
 
-			// Lines where all Seeds are still visible need not change
-			if (visibleSeeds == line.m_AssociatedSeeds.size()) continue;
-
-			std::deque<ScreenSpaceSeed*> seeds;
-			std::move(begin(line.m_AssociatedSeeds), end(line.m_AssociatedSeeds), back_inserter(seeds));
-			std::deque<glm::vec2> points;
-			std::move(begin(line.m_Points), end(line.m_Points), back_inserter(points));
-
-			// Remove leading seeds if they aren't visible, including the points closest to them
-			while (!seeds.front()->m_Visible) {
-				glm::vec2 seedPos = seeds.front()->m_Pos;
-				seeds.pop_front();
-				glm::vec2 nextSeedPos = seeds.front()->m_Pos;
-				while (glm::distance(points.front(), seedPos) < glm::distance(points.front(), nextSeedPos)) {
-					points.pop_front();
-				}
+	void Hatching::SnakesSplit() {
+		for (auto it = m_HatchingLines.begin(); it != m_HatchingLines.end(); it++) {
+			HatchingLine& line = *it;
+			if (line.HasSharpBend()) {
+				HatchingLine* rest = line.SplitSharpBend();
+				if (rest) m_HatchingLines.push_back(*rest);
 			}
-
-			// Remove trailing seeds if they aren't visible, including the points closest to them
-			while (!seeds.back()->m_Visible) {
-				glm::vec2 seedPos = seeds.back()->m_Pos;
-				seeds.pop_back();
-				glm::vec2 nextSeedPos = seeds.back()->m_Pos;
-				while (glm::distance(points.back(), seedPos) < glm::distance(points.back(), nextSeedPos)) {
-					points.pop_back();
-				}
-			}
-
-			// If there are still invisible seeds, they must be somewhere in the middle and the line must be split
-			if (visibleSeeds < seeds.size()) {
-				int splitIndex = 0;
-				int seedIndex = 0;
-				for (; splitIndex < points.size(); splitIndex++) {
-					if (glm::distance(points[splitIndex], seeds[seedIndex]->m_Pos) > glm::distance(points[splitIndex], seeds[seedIndex + 1]->m_Pos)) {
-						seedIndex++;
-					}
-					if (!seeds[seedIndex]->m_Visible) break;
-				}
-
-				std::vector<glm::vec2> restPoints;
-				std::vector<ScreenSpaceSeed*> restSeeds;
-				for (int j = splitIndex + 1; j < points.size(); j++) restPoints.push_back(points[j]);
-				for (int j = seedIndex + 1; j < seeds.size(); j++) restSeeds.push_back(seeds[j]);
-
-				for (int j = 0; j <= restPoints.size(); j++) points.pop_back();
-				for (int j = 0; j <= restSeeds.size(); j++) seeds.pop_back();
-
-				// the split off part may still have invisible seeds and will be processed by the loop later on
-				m_HatchingLines.push_back(HatchingLine{ (int)restPoints.size(), 0, restPoints, restSeeds }); 
-			}
-
-			//TODO: I may have to cut lines short/possibly even split them when a contour collision cuts through them
-
-			// write the data back into the line
-			line.m_NumPoints = points.size();
-			line.m_AssociatedSeeds.clear();
-			std::move(begin(seeds), end(seeds), back_inserter(line.m_AssociatedSeeds));
-			line.m_Points.clear();
-			std::move(begin(points), end(points), back_inserter(line.m_Points));
 		}
 	}
 
@@ -380,14 +365,15 @@ namespace Copperplate {
 		}
 	}
 	
-	bool Hatching::FindSeedCandidate(ScreenSpaceSeed*& out, HatchingLine currentLine) {
+	bool Hatching::FindSeedCandidate(ScreenSpaceSeed*& out, HatchingLine* currentLine) {
 		// TODO: Rework this to make sure even seed points further away from a line get selected eventually
 		float closestDistance = 1000.0f;
 		bool foundCandidate = false;
 		ScreenSpaceSeed* candidate;
-		for (int i = 0; i < currentLine.m_NumPoints; i++) {
-			glm::ivec2 gridPos = ScreenPosToGridPos(currentLine.m_Points[i]);
-			glm::vec2 currPixCoords = currentLine.m_Points[i] * m_ViewportSize;
+		const std::deque<glm::vec2>& currentPoints = currentLine->getPoints();
+		for (int i = 0; i < currentPoints.size(); i++) {
+			glm::ivec2 gridPos = ScreenPosToGridPos(currentPoints[i]);
+			glm::vec2 currPixCoords = currentPoints[i] * m_ViewportSize;
 			for (int x = -1; x <= 1; x++) {
 				for (int y = -1; y <= 1; y++) {
 					glm::ivec2 currGridPos = glm::clamp(gridPos + glm::ivec2(x, y), glm::ivec2(0), (m_GridSize - glm::ivec2(1)));
@@ -493,11 +479,11 @@ namespace Copperplate {
 			linePoints.push_back(currPos);
 			numPoints++;
 		}
-		return HatchingLine{ numPoints, startSeed, linePoints, associatedSeeds };
+		return HatchingLine(linePoints, associatedSeeds, this);
 	}
 
 	void Hatching::AddLineCollision(HatchingLine* line) {
-		for (glm::vec2 point : line->m_Points) {
+		for (glm::vec2 point : line->getPoints()) {
 			AddCollisionPoint(point, false, line);
 		}
 	}
@@ -557,18 +543,19 @@ namespace Copperplate {
 		for(auto it = m_HatchingLines.begin(); it != m_HatchingLines.end(); it++) {
 			if (lines <= maxLines) {
 				lines++;
-				HatchingLine line = *it;
+				HatchingLine& line = *it;
+				const std::deque<glm::vec2>& linePoints = line.getPoints();
 
 				// vertex data
-				for (int i = 0; i < line.m_NumPoints; i++) {
-					vertices.push_back(line.m_Points[i]);
+				for (int i = 0; i < linePoints.size(); i++) {
+					vertices.push_back(linePoints[i]);
 				}
 				//index data
-				for (int i = 0; i < line.m_NumPoints - 1; i++) {
+				for (int i = 0; i < ((int)linePoints.size() - 1); i++) {
 					indices.push_back(offset + i);
 					indices.push_back(offset + i + 1);
 				}
-				offset += line.m_NumPoints;
+				offset += linePoints.size();
 			}
 		}
 		m_NumLinesIndices = indices.size();
@@ -616,6 +603,14 @@ namespace Copperplate {
 			}
 		}
 		return false;
+	}
+
+	glm::vec2 Hatching::ScreenToPix(glm::vec2 screenPos) {
+		return screenPos * m_ViewportSize;
+	}
+
+	glm::vec2 Hatching::PixToScreen(glm::vec2 pixPos) {
+		return pixPos / m_ViewportSize;
 	}
 
 	glm::vec2 Hatching::GetHatchingDir(glm::vec2 screenPos) {

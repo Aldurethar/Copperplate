@@ -7,7 +7,6 @@
 
 namespace Copperplate {
 
-
 	struct SeedPoint {
 		glm::vec3 m_Pos;
 		Face& m_Face;
@@ -31,6 +30,16 @@ namespace Copperplate {
 
 	class Hatching {
 	public:
+
+		//Constants
+		static float CoverRadius;
+		static float TrimRadius;
+		static float ExtendRadius;
+		static float MergeRadius;
+		static float SplitAngle;
+		static float CurvatureBreakAngle;
+		static float CurvatureClampAngle;
+		static float ParallelAngle;
 		
 		Hatching(int viewportWidth, int viewportHeight);
 	
@@ -45,19 +54,23 @@ namespace Copperplate {
 
 		void DrawScreenSeeds();
 		void DrawHatchingLines();
-		
+				
 		void GrabNormalData();
 		void GrabCurvatureData();
 		void GrabMovementData();
+		
+		bool HasCollision(glm::vec2 screenPos, bool onlyContours);
+		glm::vec2 ScreenToPix(glm::vec2 screenPos);
+		glm::vec2 PixToScreen(glm::vec2 pixPos);
 
 	private:
 
 		void UpdateHatchingLines();
 		void SnakesDelete();
-
-
+		void SnakesSplit();
+		
 		void PrepareForHatching();
-		bool FindSeedCandidate(ScreenSpaceSeed*& out, HatchingLine currentLine);
+		bool FindSeedCandidate(ScreenSpaceSeed*& out, HatchingLine* currentLine);
 		HatchingLine CreateLine(ScreenSpaceSeed* seed);
 		void AddLineCollision(HatchingLine* line);
 		void AddCollisionPoint(glm::vec2 screenPos, bool isContour, HatchingLine* line);
@@ -67,8 +80,7 @@ namespace Copperplate {
 		
 		std::vector<CollisionPoint>* GetCollisionPoints(glm::ivec2 gridPos);
 		std::unordered_set<ScreenSpaceSeed*>* GetUnusedScreenSeeds(glm::ivec2 gridPos);
-
-		bool HasCollision(glm::vec2 screenPos, bool onlyContours);
+				
 		glm::vec2 GetHatchingDir(glm::vec2 screenPos);
 		ScreenSpaceSeed* FindNearbySeed(glm::vec2 screenPos, float maxDistance);
 		ScreenSpaceSeed* GetScreenSeedById(unsigned int id);
