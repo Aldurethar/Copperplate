@@ -14,20 +14,26 @@ namespace Copperplate {
 		delete[] m_Data;
 	}
 
-	glm::vec4 Image::Sample(glm::vec2 uvPos) {
-		glm::vec2 clampedPos = glm::clamp(uvPos, glm::vec2(0.0f), glm::vec2(1.0f));
-		glm::vec2 pixPos = clampedPos * (glm::vec2(m_Size) - glm::vec2(1.0f));
-		glm::vec2 fraction = glm::fract(pixPos);
+	glm::vec4 Image::SampleUV(glm::vec2 uvPos) {
+		return Sample(uvPos * glm::vec2(m_Size));
+	}
 
-		glm::ivec2 samplePos = glm::ivec2(floor(pixPos.x), floor(pixPos.y));
+	glm::vec4 Image::Sample(glm::vec2 screenPos) {
+		glm::vec2 pos = glm::clamp(screenPos, glm::vec2(0.0f), glm::vec2(m_Size) - glm::vec2(1.0f));
+		glm::vec2 fraction = glm::fract(pos);
+
+		if (fraction == glm::vec2(0.0f))
+			return Sample(glm::ivec2(pos));
+
+		glm::ivec2 samplePos = glm::ivec2(floor(pos.x), floor(pos.y));
 		glm::vec4 bottom = Sample(samplePos);
-		samplePos = glm::ivec2(floor(pixPos.x), ceil(pixPos.y));
+		samplePos = glm::ivec2(floor(pos.x), ceil(pos.y));
 		glm::vec4 top = Sample(samplePos);
 		glm::vec4 left = (1 - fraction.y) * bottom + fraction.y * top;
 
-		samplePos = glm::ivec2(ceil(pixPos.x), floor(pixPos.y));
+		samplePos = glm::ivec2(ceil(pos.x), floor(pos.y));
 		bottom = Sample(samplePos);
-		samplePos = glm::ivec2(ceil(pixPos.x), ceil(pixPos.y));
+		samplePos = glm::ivec2(ceil(pos.x), ceil(pos.y));
 		top = Sample(samplePos);
 		glm::vec4 right = (1 - fraction.y) * bottom + fraction.y * top;
 

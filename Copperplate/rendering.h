@@ -110,6 +110,7 @@ namespace Copperplate {
 		static bool RenderContours;
 		static bool RenderHatching;
 		static bool OnlyUpdateHatchLines;
+		static bool RenderHatchingCollision;
 		static bool RenderCurrentDebug;
 		static int NumHatchingLines;
 		static int NumPointsPerHatch;

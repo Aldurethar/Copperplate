@@ -101,6 +101,7 @@ namespace Copperplate {
 		void DrawFullScreen(EShaders shader, EFramebuffers sourceTex);
 		void DrawScreenSeeds(glm::vec3 color, float pointSize);
 		void DrawHatchingLines(EShaders shader, glm::vec3 color);
+		void DrawHatchingCollision(glm::vec3 color, float pointSize);
 
 		Unique<Renderer> m_Renderer;
 		Shared<Hatching> m_Hatching;

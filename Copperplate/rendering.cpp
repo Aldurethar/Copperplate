@@ -24,6 +24,7 @@ namespace Copperplate {
 	bool DisplaySettings::RenderScreenSpaceSeeds = false;
 	bool DisplaySettings::RenderHatching = true;
 	bool DisplaySettings::OnlyUpdateHatchLines = false;
+	bool DisplaySettings::RenderHatchingCollision = false;
 	bool DisplaySettings::RenderCurrentDebug = true;
 	int DisplaySettings::NumHatchingLines = -1;
 	int DisplaySettings::NumPointsPerHatch = -1;

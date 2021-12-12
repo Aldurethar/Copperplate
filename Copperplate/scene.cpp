@@ -217,9 +217,9 @@ namespace Copperplate {
 		int numObjects = 1;
 		m_SceneObjects = std::vector<Unique<SceneObject>>();
 		//m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSmooth.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
-		//numObjects++;
-		//m_SceneObjects[0]->Move(glm::vec3(3.0f, 0.0f, 0.0f));
-		//m_SceneObjects.push_back(CreateUnique<SceneObject>("Blob.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
+		m_SceneObjects.push_back(CreateUnique<SceneObject>("Blob.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
+		numObjects++;
+		m_SceneObjects[0]->Move(glm::vec3(3.0f, 0.0f, 0.0f));
 		m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSubdiv.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
 		numObjects++;
 
@@ -289,6 +289,8 @@ namespace Copperplate {
 			DrawScreenSeeds(glm::vec3(0.13f, 0.67f, 0.27f), 4.0f);
 		if (DisplaySettings::RenderHatching) 
 			DrawHatchingLines(SH_HatchingLines, glm::vec3(0.16f, 0.37f, 0.74f));
+		if (DisplaySettings::RenderHatchingCollision)
+			DrawHatchingCollision(glm::vec3(0.9f, 0.3f, 0.7f), 3.0f);
 		
 		if (DisplaySettings::FramebufferToDisplay != EFramebuffers::FB_Default)
 			DrawFramebufferContent(DisplaySettings::FramebufferToDisplay);
@@ -440,6 +442,13 @@ namespace Copperplate {
 		glDisable(GL_DEPTH_TEST);
 		glLineWidth(2.0f);
 		m_Hatching->DrawHatchingLines();
+	}
+
+	void Scene::DrawHatchingCollision(glm::vec3 color, float pointSize) {
+		m_Shaders[SH_Screenpoints]->Use();
+		m_Shaders[SH_Screenpoints]->SetVec3("color", color);
+		glPointSize(pointSize);
+		m_Hatching->DrawCollisionPoints();
 	}
 
 }

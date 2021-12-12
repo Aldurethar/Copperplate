@@ -15,7 +15,8 @@ namespace Copperplate {
 		Image(int width, int height);
 		~Image();
 
-		glm::vec4 Sample(glm::vec2 uvPos);
+		glm::vec4 SampleUV(glm::vec2 uvPos);
+		glm::vec4 Sample(glm::vec2 screenPos);
 		glm::vec4 Sample(glm::ivec2 pixelPos);
 
 		void CopyFrameBuffer();

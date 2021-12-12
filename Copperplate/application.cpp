@@ -73,6 +73,9 @@ namespace Copperplate {
 		else if (key == GLFW_KEY_KP_5) {
 			DisplaySettings::OnlyUpdateHatchLines = !DisplaySettings::OnlyUpdateHatchLines;
 		}
+		else if (key == GLFW_KEY_KP_6) {
+			DisplaySettings::RenderHatchingCollision = !DisplaySettings::RenderHatchingCollision;
+		}
 		else if (key == GLFW_KEY_KP_9) {
 			DisplaySettings::RenderCurrentDebug = !DisplaySettings::RenderCurrentDebug;
 		}

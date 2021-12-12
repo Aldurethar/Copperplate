@@ -5,6 +5,7 @@
 #include <map>
 #include "image.h"
 
+
 namespace Copperplate {
 
 	struct SeedPoint {
@@ -22,12 +23,15 @@ namespace Copperplate {
 	};
 
 	struct CollisionPoint {
-		glm::vec2 m_Pos;
-		bool m_isContour;
-		HatchingLine* m_Line;
+		const glm::vec2 m_Pos;
+		const bool m_isContour;
+		HatchingLine *const  m_Line; //The pointer is constant, not the HatchingLine
+
+		bool operator==(const CollisionPoint& other) const {
+			return (m_Pos.x == other.m_Pos.x && m_Pos.y == other.m_Pos.y && m_Line == other.m_Line);
+		}
 	};
 	
-
 	class Hatching {
 	public:
 
@@ -40,6 +44,12 @@ namespace Copperplate {
 		static float CurvatureBreakAngle;
 		static float CurvatureClampAngle;
 		static float ParallelAngle;
+		static float OptiStepSize;
+		static int NumOptiSteps;
+		static float OptiSeedWeight;
+		static float OptiSmoothWeight;
+		static float OptiFieldWeight;
+		static float OptiSpringWeight;
 		
 		Hatching(int viewportWidth, int viewportHeight);
 	
@@ -54,37 +64,59 @@ namespace Copperplate {
 
 		void DrawScreenSeeds();
 		void DrawHatchingLines();
+		void DrawCollisionPoints();
 				
 		void GrabNormalData();
 		void GrabCurvatureData();
 		void GrabMovementData();
 		
 		bool HasCollision(glm::vec2 screenPos, bool onlyContours);
-		glm::vec2 ScreenToPix(glm::vec2 screenPos);
-		glm::vec2 PixToScreen(glm::vec2 pixPos);
+		glm::vec2 ViewToScreen(glm::vec2 screenPos);
+		glm::vec2 ScreenToView(glm::vec2 pixPos);
 
 	private:
 
 		void UpdateHatchingLines();
+		void SnakesAdvect();
+		void SnakesResample();
+		void SnakesRelax();
 		void SnakesDelete();
 		void SnakesSplit();
+		void SnakesTrim();
+		void SnakesExtend();
+		void SnakesInsert();
 		
+		void SnakesUpdateCollision();
+
+		void UpdateUnusedSeeds();
+
+		float EvaluatePointPos(HatchingLine& line, int index, glm::vec2 pointPos, const std::deque<glm::vec2>& points);
+		bool HasParallelNearby(glm::vec2 point, glm::vec2 dir, const HatchingLine& line);
+		void UpdateLineCollision(HatchingLine& line);
+		void RemoveLineCollision(const HatchingLine& line);
+		void UpdateLineSeeds(HatchingLine& line);
+		HatchingLine ConstructLine(ScreenSpaceSeed* seed);
+		std::vector<glm::vec2> ExtendLine(glm::vec2 tip, glm::vec2 second);
+
+
 		void PrepareForHatching();
 		bool FindSeedCandidate(ScreenSpaceSeed*& out, HatchingLine* currentLine);
-		HatchingLine CreateLine(ScreenSpaceSeed* seed);
+		//HatchingLine CreateLine(ScreenSpaceSeed* seed);
 		void AddLineCollision(HatchingLine* line);
 		void AddCollisionPoint(glm::vec2 screenPos, bool isContour, HatchingLine* line);
 
 		void FillGLBuffers();
 		void UpdateScreenSeedIdMap();
 		
-		std::vector<CollisionPoint>* GetCollisionPoints(glm::ivec2 gridPos);
+		std::unordered_set<CollisionPoint>* GetCollisionPoints(glm::ivec2 gridPos);
+		std::unordered_set<ScreenSpaceSeed*>* GetVisibleScreenSeeds(glm::ivec2 gridPos);
 		std::unordered_set<ScreenSpaceSeed*>* GetUnusedScreenSeeds(glm::ivec2 gridPos);
 				
 		glm::vec2 GetHatchingDir(glm::vec2 screenPos);
 		ScreenSpaceSeed* FindNearbySeed(glm::vec2 screenPos, float maxDistance);
 		ScreenSpaceSeed* GetScreenSeedById(unsigned int id);
 		glm::ivec2 ScreenPosToGridPos(glm::vec2 screenPos);
+		bool IsInBounds(glm::vec2 screenPos);
 
 		glm::vec2 m_ViewportSize;
 		std::list<HatchingLine> m_HatchingLines;
@@ -93,8 +125,10 @@ namespace Copperplate {
 		std::map<unsigned int, ScreenSpaceSeed*> m_ScreenSeedIdMap;
 		
 		glm::ivec2 m_GridSize;
-		std::vector<std::unordered_set<ScreenSpaceSeed*>> m_UnusedScreenSeeds;
-		std::vector<std::vector<CollisionPoint>> m_CollisionPoints;
+		std::vector<std::unordered_set<ScreenSpaceSeed*>> m_VisibleSeedsGrid;
+		std::vector<std::unordered_set<ScreenSpaceSeed*>> m_UnusedSeedsGrid;
+		std::vector<std::unordered_set<CollisionPoint>> m_CollisionPointsGrid;
+		int m_NumUnusedSeeds;
 
 		Unique<Image> m_NormalData;
 		Unique<Image> m_CurvatureData;
@@ -109,6 +143,20 @@ namespace Copperplate {
 		unsigned int m_LinesIndexBuffer;
 		int m_NumLinesIndices;
 
+		unsigned int m_CollisionVAO;
+		unsigned int m_CollisionVBO;
+		int m_NumCollisionPoints;
+
 	};
 	
+}
+
+// Hash Function for CollisionPoint so we can use it in a std::unordered_set
+namespace std {
+	template<>
+	struct hash<Copperplate::CollisionPoint> {
+		const size_t operator()(const Copperplate::CollisionPoint& point) const {
+			return std::hash<float>()(point.m_Pos.x) ^ std::hash<float>()(point.m_Pos.y);
+		}
+	};
 }

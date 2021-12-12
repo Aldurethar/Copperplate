@@ -17,6 +17,7 @@ namespace Copperplate {
 		HatchingLine(const std::vector<glm::vec2>& points, const std::vector<ScreenSpaceSeed*>& seeds, Hatching* hatching);
 
 		void Resample();
+		void MovePointsTo(const std::deque<glm::vec2>& newPoints);
 
 		void PruneFront();
 		void PruneBack();
@@ -24,6 +25,14 @@ namespace Copperplate {
 		HatchingLine* SplitFromOcclusion();
 		HatchingLine* SplitSharpBend();
 		HatchingLine* Split(int splitIndex);
+		
+		void RemoveFromFront(int count);
+		void RemoveFromBack(int count);
+
+		void ExtendFront(const std::vector<glm::vec2>& newPoints);
+		void ExtendBack(const std::vector<glm::vec2>& newPoints);
+
+		void ReplaceSeeds(const std::vector<ScreenSpaceSeed*>& newSeeds);
 
 		bool NeedsResampling();
 		bool HasVisibleSeeds();
@@ -31,19 +40,30 @@ namespace Copperplate {
 		bool HasMiddleOcclusion();
 		bool HasSharpBend();
 		
-		std::deque<glm::vec2>& getPoints() { return m_Points; };
-		const std::deque<ScreenSpaceSeed*>& getSeeds() { return m_AssociatedSeeds; };
+		bool HasChanged() const { return m_HasChanged; };
+		void ResetChangedFlag();
+
+		glm::vec2 getDirAt(glm::vec2 pos);
+		std::vector<ScreenSpaceSeed*> getSeedsForPoint(int index);
+		glm::vec2 getSegmentDir(int index);
+
+		const std::deque<glm::vec2>& getPoints() const { return m_Points; };
+		const std::deque<ScreenSpaceSeed*>& getSeeds() const { return m_AssociatedSeeds; };
+		const std::vector<glm::vec2> getPointsBeforeChange() const { return m_PointsBeforeChange; };
+
 
 	private:
-
-		void RemoveFromFront(int count);
-		void RemoveFromBack(int count);
-
+		
 		int m_NumPoints;
 		std::deque<glm::vec2> m_Points;
 		std::deque<ScreenSpaceSeed*> m_AssociatedSeeds;
 		std::deque<int> m_SeedPlacements;
+		bool m_HasChanged;
+		std::vector<glm::vec2> m_PointsBeforeChange;
 		Hatching* m_Hatching;
+		
+		void SetChangedFlag();
+		void SetPointsBeforeChange(const std::vector<glm::vec2>& points);
 	};
 
 

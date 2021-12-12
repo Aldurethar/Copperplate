@@ -12,15 +12,15 @@ namespace Copperplate {
 		m_Points = std::deque<glm::vec2>();
 		m_AssociatedSeeds = std::deque<ScreenSpaceSeed*>();
 		m_SeedPlacements = std::deque<int>();
+		m_HasChanged = true;
+		m_PointsBeforeChange = std::vector<glm::vec2>();
 
-		//std::copy(seeds.begin(), seeds.end(), m_AssociatedSeeds.begin());
-		for (ScreenSpaceSeed* seed : seeds) {
-			m_AssociatedSeeds.push_back(seed);
-		}
-		int currSeed = 0;
-		float prevDist = 1000.0f;
 		for (int i = 0; i < m_NumPoints; i++) {
 			m_Points.push_back(points[i]);
+		}
+
+		for (ScreenSpaceSeed* seed : seeds) {
+			m_AssociatedSeeds.push_back(seed);
 		}
 		int currPoint = 0;
 		for (int i = 0; i < m_AssociatedSeeds.size(); i++) {
@@ -47,6 +47,8 @@ namespace Copperplate {
 	void HatchingLine::Resample() {
 		assert(m_AssociatedSeeds.size() == m_SeedPlacements.size());
 
+		SetChangedFlag();
+
 		std::deque<glm::vec2> newPoints;
 		std::deque<ScreenSpaceSeed*> newSeeds;
 		std::deque<int> newSeedPlacements;
@@ -55,10 +57,10 @@ namespace Copperplate {
 		int currSeed = 0;
 
 		for (int i = 1; i < m_NumPoints; i++) {
-			float pixDistance = glm::distance(m_Hatching->ScreenToPix(m_Points[i]), m_Hatching->ScreenToPix(lastPoint));
-			if (pixDistance > Hatching::ExtendRadius) {
+			float distance = glm::distance(m_Points[i], lastPoint);
+			if (distance > Hatching::ExtendRadius) {
 				// if the distance is too big, add additional points
-				int numSteps = ceil(pixDistance / Hatching::ExtendRadius);
+				int numSteps = ceil(distance / Hatching::ExtendRadius);
 				glm::vec2 step = (m_Points[i] - m_Points[i - 1]) / (float)numSteps;
 				for (int j = 1; j <= numSteps; j++) {
 					lastPoint = lastPoint + step;
@@ -88,7 +90,7 @@ namespace Copperplate {
 					newSeedPlacements.push_back(newPoints.size() - 1 - numSteps + offset);
 				}
 			}
-			else if (pixDistance < Hatching::ExtendRadius * 0.5f) {
+			else if (distance < Hatching::ExtendRadius * 0.5f) {
 				// if the distance is too small, skip the current point
 				while (currSeed < m_AssociatedSeeds.size() && m_SeedPlacements[currSeed] <= i) {
 					newSeeds.push_back(m_AssociatedSeeds[currSeed]);
@@ -111,6 +113,16 @@ namespace Copperplate {
 		m_NumPoints = m_Points.size();
 		m_AssociatedSeeds = newSeeds;
 		m_SeedPlacements = newSeedPlacements;
+	}
+
+	void HatchingLine::MovePointsTo(const std::deque<glm::vec2>& newPoints) {
+		assert(newPoints.size() == m_NumPoints);
+
+		SetChangedFlag();
+
+		for (int i = 0; i < m_NumPoints; i++) {
+			m_Points[i] = newPoints[i];
+		}
 	}
 
 	void HatchingLine::PruneFront() {
@@ -207,6 +219,8 @@ namespace Copperplate {
 		assert(splitIndex > 0);
 		assert(splitIndex < m_NumPoints - 1);
 
+		SetChangedFlag();
+
 		std::vector<glm::vec2> restPoints;
 		std::vector<ScreenSpaceSeed*> restSeeds;
 		restPoints.reserve(m_Points.size() - splitIndex);
@@ -222,7 +236,10 @@ namespace Copperplate {
 
 		RemoveFromBack(m_Points.size() - splitIndex);
 
-		return new HatchingLine(restPoints, restSeeds, m_Hatching);
+		HatchingLine* rest = new HatchingLine(restPoints, restSeeds, m_Hatching);
+		rest->SetPointsBeforeChange(m_PointsBeforeChange);
+
+		return rest;
 	}
 
 	bool HatchingLine::NeedsResampling() {
@@ -272,10 +289,11 @@ namespace Copperplate {
 		return false;
 	}
 
-	// PRIVATE FUNCTIONS
-
 	void HatchingLine::RemoveFromFront(int count) {
 		if (count > 0) {
+
+			SetChangedFlag();
+
 			m_Points.erase(m_Points.begin(), m_Points.begin() + count);
 			while (!m_SeedPlacements.empty() && m_SeedPlacements.front() < count) {
 				m_AssociatedSeeds.pop_front();
@@ -290,6 +308,9 @@ namespace Copperplate {
 
 	void HatchingLine::RemoveFromBack(int count) {
 		if (count > 0) {
+
+			SetChangedFlag();
+
 			int offset = m_Points.size() - count;
 			m_Points.erase(m_Points.begin() + offset, m_Points.end());
 			while (!m_SeedPlacements.empty() && m_SeedPlacements.back() >= offset) {
@@ -300,4 +321,127 @@ namespace Copperplate {
 		}
 	}
 
+	void HatchingLine::ExtendFront(const std::vector<glm::vec2>& newPoints) {
+		if (newPoints.size() > 0) {
+			SetChangedFlag();
+
+			for (glm::vec2 point : newPoints) {
+				m_Points.push_front(point);
+			}
+			for (int& placement : m_SeedPlacements) {
+				placement += newPoints.size();
+			}
+			m_NumPoints = m_Points.size();
+		}
+	}
+
+	void HatchingLine::ExtendBack(const std::vector<glm::vec2>& newPoints) {
+		if (newPoints.size() > 0) {
+			SetChangedFlag();
+
+			for (glm::vec2 point : newPoints) {
+				m_Points.push_back(point);
+			}
+			m_NumPoints = m_Points.size();
+		}
+	}
+
+	void HatchingLine::ReplaceSeeds(const std::vector<ScreenSpaceSeed*>& newSeeds) {
+		m_AssociatedSeeds.clear();
+		m_SeedPlacements.clear();
+		for (ScreenSpaceSeed* seed : newSeeds) {
+			m_AssociatedSeeds.push_back(seed);
+		}
+		int currPoint = 0;
+		for (int i = 0; i < m_AssociatedSeeds.size(); i++) {
+			if (currPoint == m_Points.size() - 1) {
+				m_SeedPlacements.push_back(currPoint);
+			}
+			else {
+				for (; currPoint < m_Points.size() - 1; currPoint++) {
+					float dist = glm::distance(m_Points[currPoint], m_AssociatedSeeds[i]->m_Pos);
+					float nextDist = glm::distance(m_Points[currPoint + 1], m_AssociatedSeeds[i]->m_Pos);
+					if (nextDist > dist) {
+						m_SeedPlacements.push_back(currPoint);
+						break;
+					}
+				}
+				if (currPoint == m_Points.size() - 1) {
+					m_SeedPlacements.push_back(currPoint);
+				}
+			}
+		}
+		assert(newSeeds.size() == m_AssociatedSeeds.size());
+		assert(m_AssociatedSeeds.size() == m_SeedPlacements.size());
+	}
+
+	glm::vec2 HatchingLine::getDirAt(glm::vec2 pos) {
+		glm::vec2 result;
+		int closestIndex = 0;
+		float closestDist = 1000.0f;
+		for (int i = 0; i < m_NumPoints; i++) {
+			float dist = glm::distance(pos, m_Points[i]);
+			if (dist < closestDist) {
+				closestIndex = i;
+				closestDist = dist;
+			}
+		}
+		if (closestIndex == 0)
+			return glm::normalize(m_Points[closestIndex + 1] - m_Points[closestIndex]);
+
+		if (closestIndex == m_NumPoints - 1)
+			return glm::normalize(m_Points[closestIndex] - m_Points[closestIndex - 1]);
+
+		return glm::normalize(m_Points[closestIndex + 1] - m_Points[closestIndex - 1]);
+	}
+
+	std::vector<ScreenSpaceSeed*> HatchingLine::getSeedsForPoint(int index) {
+		std::vector<ScreenSpaceSeed*> result;
+		for (int i = 0; i < m_SeedPlacements.size(); i++) {
+			if (m_SeedPlacements[i] == index)
+				result.push_back(m_AssociatedSeeds[i]);
+		}
+		
+		return result;
+	}
+
+	glm::vec2 HatchingLine::getSegmentDir(int index) {
+		int i1 = index;
+		int i2 = index + 1;
+		if (index < 0) {
+			i1 = 0;
+			i2 = 1;
+		}
+		if (index >= m_NumPoints - 1) {
+			i1 = m_NumPoints - 2;
+			i2 = m_NumPoints - 1;
+		}
+		glm::vec2 p1 = m_Points[i1];
+		glm::vec2 p2 = m_Points[i2];
+		float dist = glm::distance(p1, p2);
+		return (p2 - p1) / dist;
+	}
+
+	void HatchingLine::ResetChangedFlag() {
+		m_PointsBeforeChange.clear();
+		m_HasChanged = false;
+	}
+
+	// PRIVATE FUNCTIONS
+
+	void HatchingLine::SetChangedFlag() {
+		if (!m_HasChanged) {
+			m_PointsBeforeChange.clear();
+			m_PointsBeforeChange.reserve(m_NumPoints);
+			for (int i = 0; i < m_NumPoints; i++) {
+				m_PointsBeforeChange.push_back(m_Points[i]);
+			}
+			m_HasChanged = true;
+		}
+	}
+
+	void HatchingLine::SetPointsBeforeChange(const std::vector<glm::vec2>& points) {
+		m_PointsBeforeChange = points;
+		m_HasChanged = true;
+	}
 }
