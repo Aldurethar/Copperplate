@@ -36,6 +36,10 @@ set(SOURCE_LIST
 	shaders/movement.frag
 	shaders/spherenormals.vert
 	shaders/spherenormals.frag
+	shaders/diffuse.vert
+	shaders/diffuse.frag
+	shaders/shadingGradient.vert
+	shaders/shadingGradient.frag
 )
 
 # Setup as an executable

@@ -17,6 +17,8 @@ namespace Copperplate {
 	const glm::vec4 DEPTH_CLEARCOLOR = glm::vec4(100.0f, 1.0f, 1.0f, 0.0f);
 	const glm::vec4 CURVATURE_CLEARCOLOR = glm::vec4(0.0f);
 	const glm::vec4 MOVEMENT_CLEARCOLOR = glm::vec4(0.0f);
+	const glm::vec4 DIFFUSE_CLEARCOLOR = glm::vec4(0.0f);
+	const glm::vec4 SHADINGGRAD_CLEARCOLOR = glm::vec4(0.0f);
 
 	// Display Settings
 	bool DisplaySettings::RenderContours = true;
@@ -326,6 +328,69 @@ namespace Copperplate {
 
 		m_Framebuffers[FB_Movement] = movement;
 
+		//Diffuse Shading Framebuffer
+		FrameBuffer diffuse;
+		diffuse.m_ClearColor = DIFFUSE_CLEARCOLOR;
+		diffuse.m_ClearFlags = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT;
+		glGenFramebuffers(1, &diffuse.m_FBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, diffuse.m_FBO);
+
+		glGenTextures(1, &diffuse.m_Texture);
+		glBindTexture(GL_TEXTURE_2D, diffuse.m_Texture);
+
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_Window->GetWidth(), m_Window->GetHeight(), 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, diffuse.m_Texture, 0);
+
+		glCheckError();
+
+		glGenRenderbuffers(1, &rbo);
+		glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, m_Window->GetWidth(), m_Window->GetHeight());
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+		glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+		glCheckError();
+		glCheckFrameBufferError();
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		m_Framebuffers[FB_Diffuse] = diffuse;
+
+		//Shading Gradient Framebuffer
+		FrameBuffer shadingGradient;
+		shadingGradient.m_ClearColor = SHADINGGRAD_CLEARCOLOR;
+		shadingGradient.m_ClearFlags = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT;
+		glGenFramebuffers(1, &shadingGradient.m_FBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, shadingGradient.m_FBO);
+
+		glGenTextures(1, &shadingGradient.m_Texture);
+		glBindTexture(GL_TEXTURE_2D, shadingGradient.m_Texture);
+
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, m_Window->GetWidth(), m_Window->GetHeight(), 0, GL_RG, GL_SHORT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, shadingGradient.m_Texture, 0);
+
+		glCheckError();
+
+		glGenRenderbuffers(1, &rbo);
+		glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, m_Window->GetWidth(), m_Window->GetHeight());
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+		glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+		glCheckError();
+		glCheckFrameBufferError();
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		m_Framebuffers[FB_ShadingGradient] = shadingGradient;
 	}
 
 	void Renderer::SwitchFrameBuffer(EFramebuffers framebuffer, bool clear)

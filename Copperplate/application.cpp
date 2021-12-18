@@ -120,6 +120,12 @@ namespace Copperplate {
 		else if (key == GLFW_KEY_5) {
 			DisplaySettings::FramebufferToDisplay = EFramebuffers::FB_Movement;
 		}
+		else if (key == GLFW_KEY_6) {
+			DisplaySettings::FramebufferToDisplay = EFramebuffers::FB_Diffuse;
+		}
+		else if (key == GLFW_KEY_7) {
+			DisplaySettings::FramebufferToDisplay = EFramebuffers::FB_ShadingGradient;
+		}
 		else if (key == GLFW_KEY_F1) {
 			DisplaySettings::HatchingDirection = EHatchingDirections::HD_LargestCurvature;
 		}
@@ -131,6 +137,12 @@ namespace Copperplate {
 		}
 		else if (key == GLFW_KEY_F4) {
 			DisplaySettings::HatchingDirection = EHatchingDirections::HD_Tangent;
+		}
+		else if (key == GLFW_KEY_F5) {
+			DisplaySettings::HatchingDirection = EHatchingDirections::HD_ShadeGradient;
+		}
+		else if (key == GLFW_KEY_F6) {
+		DisplaySettings::HatchingDirection = EHatchingDirections::HD_ShadeNormal;
 		}
 
 		// General Window input

@@ -67,6 +67,7 @@ namespace Copperplate {
 
 		m_NormalData = CreateUnique<Image>(m_ViewportSize.x, m_ViewportSize.y);
 		m_CurvatureData = CreateUnique<Image>(m_ViewportSize.x, m_ViewportSize.y);
+		m_GradientData = CreateUnique<Image>(m_ViewportSize.x, m_ViewportSize.y);
 		m_MovementData = CreateUnique<Image>(m_ViewportSize.x, m_ViewportSize.y);
 		
 		// setup opengl buffers
@@ -230,6 +231,10 @@ namespace Copperplate {
 
 	void Hatching::GrabCurvatureData() {
 		m_CurvatureData->CopyFrameBuffer();
+	}
+
+	void Hatching::GrabGradientData() {
+		m_GradientData->CopyFrameBuffer();
 	}
 
 	void Hatching::GrabMovementData() {
@@ -1116,15 +1121,20 @@ namespace Copperplate {
 			DisplaySettings::HatchingDirection == EHatchingDirections::HD_SmallestCurvature) {
 			dir = glm::vec2(m_CurvatureData->Sample(screenPos));
 		}
-		else {
+		else if (DisplaySettings::HatchingDirection == EHatchingDirections::HD_Normal ||
+				DisplaySettings::HatchingDirection == EHatchingDirections::HD_Tangent){
 			dir = glm::vec2(m_NormalData->Sample(screenPos));
+		}
+		else {
+			dir = glm::vec2(m_GradientData->Sample(screenPos));
 		}
 
 		if (glm::length(dir) > eps) dir = glm::normalize(dir);
 		else dir = glm::vec2(0.0f);
 		
 		if (DisplaySettings::HatchingDirection == EHatchingDirections::HD_SmallestCurvature ||
-			DisplaySettings::HatchingDirection == EHatchingDirections::HD_Tangent) {
+			DisplaySettings::HatchingDirection == EHatchingDirections::HD_Tangent ||
+			DisplaySettings::HatchingDirection == EHatchingDirections::HD_ShadeNormal) {
 			dir = glm::vec2(-dir.y, dir.x);
 		}
 

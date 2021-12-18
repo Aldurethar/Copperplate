@@ -73,6 +73,8 @@ namespace Copperplate {
 		SH_HatchingLines,
 		SH_SphereNormals,
 		SH_Movement,
+		SH_Diffuse,
+		SH_ShadingGradient,
 	};
 
 	class Scene {
@@ -106,6 +108,7 @@ namespace Copperplate {
 		Unique<Renderer> m_Renderer;
 		Shared<Hatching> m_Hatching;
 		Unique<Camera> m_Camera;
+		glm::vec3 m_LightDir;
 		std::map<EShaders, Shared<Shader>> m_Shaders;
 		std::map<EShaders, Shared<ComputeShader>> m_ComputeShaders;
 		std::vector<Unique<SceneObject>> m_SceneObjects;

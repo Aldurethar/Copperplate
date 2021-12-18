@@ -71,6 +71,7 @@ namespace Copperplate {
 				
 		void GrabNormalData();
 		void GrabCurvatureData();
+		void GrabGradientData();
 		void GrabMovementData();
 		
 		bool HasCollision(glm::vec2 screenPos, bool onlyContours);
@@ -136,6 +137,7 @@ namespace Copperplate {
 
 		Unique<Image> m_NormalData;
 		Unique<Image> m_CurvatureData;
+		Unique<Image> m_GradientData;
 		Unique<Image> m_MovementData;
 
 		unsigned int m_ScreenSeedsVAO;

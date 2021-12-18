@@ -70,6 +70,8 @@ namespace Copperplate {
 		FB_Depth,
 		FB_Curvature,
 		FB_Movement,
+		FB_Diffuse,
+		FB_ShadingGradient,
 	};
 
 	//RENDERER CLASS
@@ -100,6 +102,8 @@ namespace Copperplate {
 		HD_SmallestCurvature,
 		HD_Normal,
 		HD_Tangent,
+		HD_ShadeGradient,
+		HD_ShadeNormal,
 	};
 
 	//DISPLAY SETTINGS CLASS

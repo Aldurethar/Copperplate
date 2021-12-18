@@ -207,6 +207,7 @@ namespace Copperplate {
 		m_Camera = CreateUnique<Camera>(window->GetWidth(), window->GetHeight());
 		m_Renderer = CreateUnique<Renderer>(window);
 		m_Hatching = CreateShared<Hatching>(window->GetWidth(), window->GetHeight());
+		m_LightDir = glm::normalize(glm::vec3(-1.0f, -1.0f, 0.0f));
 
 		//Setup the shaders
 		m_Shaders = std::map<EShaders, Shared<Shader>>();
@@ -217,7 +218,8 @@ namespace Copperplate {
 		int numObjects = 1;
 		m_SceneObjects = std::vector<Unique<SceneObject>>();
 		//m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSmooth.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
-		m_SceneObjects.push_back(CreateUnique<SceneObject>("Blob.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
+		//m_SceneObjects.push_back(CreateUnique<SceneObject>("Blob.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
+		m_SceneObjects.push_back(CreateUnique<SceneObject>("Sphere.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
 		//numObjects++;
 		//m_SceneObjects[0]->Move(glm::vec3(3.0f, 0.0f, 0.0f));
 		//m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSubdiv.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
@@ -269,6 +271,19 @@ namespace Copperplate {
 		glCheckError();
 		DrawFullScreen(SH_Curvature, FB_Normals);
 		m_Hatching->GrabCurvatureData();
+
+		//Diffuse Shading
+		m_Renderer->SwitchFrameBuffer(FB_Diffuse, true);
+		glCheckError();
+		for (auto& object : m_SceneObjects) {
+			DrawObject(object, SH_Diffuse);
+		}
+
+		//Shading Gradient
+		m_Renderer->SwitchFrameBuffer(FB_ShadingGradient, true);
+		glCheckError();
+		DrawFullScreen(SH_ShadingGradient, FB_Diffuse);
+		m_Hatching->GrabGradientData();
 
 		//Draw the Objects
 		m_Renderer->SwitchFrameBuffer(FB_Default, true);
@@ -345,25 +360,44 @@ namespace Copperplate {
 
 		Shared<Shader> movement = CreateShared<Shader>(ST_VertFrag, "shaders/movement.vert", nullptr, "shaders/movement.frag");
 		m_Shaders[SH_Movement] = movement;
+
+		Shared<Shader> diffuse = CreateShared<Shader>(ST_VertFrag, "shaders/diffuse.vert", nullptr, "shaders/diffuse.frag");
+		m_Shaders[SH_Diffuse] = diffuse;
+
+		Shared<Shader> shadingGrad = CreateShared<Shader>(ST_VertFrag, "shaders/shadingGradient.vert", nullptr, "shaders/shadingGradient.frag");
+		m_Shaders[SH_ShadingGradient] = shadingGrad;
 	}
 
 	void Scene::UpdateUniforms() {
 		m_Shaders[SH_Flatcolor]->SetMat4("view", m_Camera->GetViewMatrix());
 		m_Shaders[SH_Flatcolor]->SetMat4("projection", m_Camera->GetProjectionMatrix());
+
 		m_Shaders[SH_ExtractContours]->SetMat4("view", m_Camera->GetViewMatrix());
 		m_Shaders[SH_ExtractContours]->SetMat4("projection", m_Camera->GetProjectionMatrix());
 		m_Shaders[SH_ExtractContours]->SetVec3("viewDirection", m_Camera->GetForwardVector());
+
 		m_Shaders[SH_Normals]->SetMat4("view", m_Camera->GetViewMatrix());
 		m_Shaders[SH_Normals]->SetMat4("viewInvTrans", glm::transpose(glm::inverse(m_Camera->GetViewMatrix())));
 		m_Shaders[SH_Normals]->SetMat4("projection", m_Camera->GetProjectionMatrix());
 		m_Shaders[SH_Normals]->SetFloat("zMin", Z_MIN);
 		m_Shaders[SH_Normals]->SetFloat("zMax", Z_MAX);
+
 		m_Shaders[SH_Depth]->SetMat4("view", m_Camera->GetViewMatrix());
 		m_Shaders[SH_Depth]->SetMat4("projection", m_Camera->GetProjectionMatrix());
+
 		m_Shaders[SH_Curvature]->SetFloat("sigma", 3.3f);
+
 		m_Shaders[SH_Movement]->SetMat4("view", m_Camera->GetViewMatrix());
 		m_Shaders[SH_Movement]->SetMat4("projection", m_Camera->GetProjectionMatrix());
 		m_Shaders[SH_Movement]->SetMat4("prevView", m_Camera->GetPrevViewMatrix());
+
+		m_Shaders[SH_Diffuse]->SetMat4("view", m_Camera->GetViewMatrix());
+		m_Shaders[SH_Diffuse]->SetMat4("viewInvTrans", glm::transpose(glm::inverse(m_Camera->GetViewMatrix())));
+		m_Shaders[SH_Diffuse]->SetMat4("projection", m_Camera->GetProjectionMatrix());
+		m_Shaders[SH_Diffuse]->SetVec3("lightDirection", m_LightDir);
+
+		m_Shaders[SH_ShadingGradient]->SetFloat("sigma", 2.0f);
+
 		m_ComputeShaders[SH_TransformSeeds]->SetMat4("view", m_Camera->GetViewMatrix());
 		m_ComputeShaders[SH_TransformSeeds]->SetMat4("projection", m_Camera->GetProjectionMatrix());
 		glCheckError();
