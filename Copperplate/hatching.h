@@ -36,20 +36,23 @@ namespace Copperplate {
 	public:
 
 		//Constants
+		static float LineDistance;
+		static float CollisionRadius;
 		static float CoverRadius;
 		static float TrimRadius;
 		static float ExtendRadius;
 		static float MergeRadius;
 		static float SplitAngle;
-		static float CurvatureBreakAngle;
-		static float CurvatureClampAngle;
 		static float ParallelAngle;
+		static float ExtendStraightVsCloseWeight;
 		static float OptiStepSize;
 		static int NumOptiSteps;
 		static float OptiSeedWeight;
 		static float OptiSmoothWeight;
 		static float OptiFieldWeight;
 		static float OptiSpringWeight;
+
+		static void RecalculateConstants();
 		
 		Hatching(int viewportWidth, int viewportHeight);
 	
@@ -84,6 +87,7 @@ namespace Copperplate {
 		void SnakesSplit();
 		void SnakesTrim();
 		void SnakesExtend();
+		void SnakesMerge();
 		void SnakesInsert();
 		
 		void SnakesUpdateCollision();
@@ -97,12 +101,13 @@ namespace Copperplate {
 		void UpdateLineSeeds(HatchingLine& line);
 		HatchingLine ConstructLine(ScreenSpaceSeed* seed);
 		std::vector<glm::vec2> ExtendLine(glm::vec2 tip, glm::vec2 second);
+		std::vector<const CollisionPoint*> FindMergeCandidates(glm::vec2 tip, glm::vec2 tipDir, HatchingLine* line);
+		float EvaluateMergeCandidate(const HatchingLine& line, const CollisionPoint* candidate, bool mergeToFront);
+		std::vector<ScreenSpaceSeed*> FindSeedsInRadius(glm::vec2 point, float radius);
 
 
 		void PrepareForHatching();
 		bool FindSeedCandidate(ScreenSpaceSeed*& out, HatchingLine* currentLine);
-		//HatchingLine CreateLine(ScreenSpaceSeed* seed);
-		void AddLineCollision(HatchingLine* line);
 		void AddCollisionPoint(glm::vec2 screenPos, bool isContour, HatchingLine* line);
 
 		void FillGLBuffers();
@@ -113,7 +118,6 @@ namespace Copperplate {
 		std::unordered_set<ScreenSpaceSeed*>* GetUnusedScreenSeeds(glm::ivec2 gridPos);
 				
 		glm::vec2 GetHatchingDir(glm::vec2 screenPos);
-		ScreenSpaceSeed* FindNearbySeed(glm::vec2 screenPos, float maxDistance);
 		ScreenSpaceSeed* GetScreenSeedById(unsigned int id);
 		glm::ivec2 ScreenPosToGridPos(glm::vec2 screenPos);
 		bool IsInBounds(glm::vec2 screenPos);

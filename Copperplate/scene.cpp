@@ -218,9 +218,9 @@ namespace Copperplate {
 		m_SceneObjects = std::vector<Unique<SceneObject>>();
 		//m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSmooth.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
 		m_SceneObjects.push_back(CreateUnique<SceneObject>("Blob.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
-		numObjects++;
-		m_SceneObjects[0]->Move(glm::vec3(3.0f, 0.0f, 0.0f));
-		m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSubdiv.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
+		//numObjects++;
+		//m_SceneObjects[0]->Move(glm::vec3(3.0f, 0.0f, 0.0f));
+		//m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSubdiv.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
 		numObjects++;
 
 	}
@@ -376,8 +376,8 @@ namespace Copperplate {
 	}
 
 	void Scene::DrawFlatColor(const Unique<SceneObject>& object, glm::vec3 color) {
-		object->SetShader(m_Shaders[SH_Flatcolor]);
 		m_Shaders[SH_Flatcolor]->SetVec3("color", color);
+		object->SetShader(m_Shaders[SH_Flatcolor]);
 		glEnable(GL_DEPTH_TEST);
 		object->Draw();
 	}
@@ -397,8 +397,8 @@ namespace Copperplate {
 	}
 
 	void Scene::DrawSeedPoints(const Unique<SceneObject>& object, glm::vec3 color, float pointSize) {
-		object->SetShader(m_Shaders[SH_Flatcolor]);
 		m_Shaders[SH_Flatcolor]->SetVec3("color", color);
+		object->SetShader(m_Shaders[SH_Flatcolor]);
 		glEnable(GL_DEPTH_TEST);
 		glPointSize(pointSize);
 		object->DrawSeedPoints();
@@ -412,8 +412,8 @@ namespace Copperplate {
 	}
 
 	void Scene::DrawScreenSeeds(glm::vec3 color, float pointSize)	{
-		m_Shaders[SH_Screenpoints]->Use();
 		m_Shaders[SH_Screenpoints]->SetVec3("color", color);
+		m_Shaders[SH_Screenpoints]->Use();
 		glPointSize(pointSize);
 		m_Hatching->DrawScreenSeeds();
 	}
@@ -445,8 +445,8 @@ namespace Copperplate {
 	}
 
 	void Scene::DrawHatchingCollision(glm::vec3 color, float pointSize) {
-		m_Shaders[SH_Screenpoints]->Use();
 		m_Shaders[SH_Screenpoints]->SetVec3("color", color);
+		m_Shaders[SH_Screenpoints]->Use();
 		glPointSize(pointSize);
 		m_Hatching->DrawCollisionPoints();
 	}

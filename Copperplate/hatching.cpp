@@ -8,20 +8,29 @@
 
 namespace Copperplate {
 
-	float Hatching::CoverRadius = DisplaySettings::LineTestDistance * 0.8f;
-	float Hatching::TrimRadius = DisplaySettings::LineTestDistance;
-	float Hatching::ExtendRadius = DisplaySettings::LineTestDistance * 1.2f;
-	float Hatching::MergeRadius = DisplaySettings::LineTestDistance * 1.4f;
-	float Hatching::SplitAngle = degToRad(20);
-	float Hatching::CurvatureBreakAngle = degToRad(20);
-	float Hatching::CurvatureClampAngle = degToRad(8);
-	float Hatching::ParallelAngle = degToRad(10);
+	float Hatching::LineDistance =		4.0f;
+	float Hatching::CollisionRadius =	LineDistance * 0.7f;
+	float Hatching::CoverRadius =		LineDistance * 1.0f;
+	float Hatching::TrimRadius =		LineDistance * 0.7f;
+	float Hatching::ExtendRadius =		LineDistance * 1.2f;
+	float Hatching::MergeRadius =		LineDistance * 1.3f;
+	float Hatching::SplitAngle =		degToRad(20);
+	float Hatching::ParallelAngle =		degToRad(10);
+	float Hatching::ExtendStraightVsCloseWeight = 0.8f;
 	float Hatching::OptiStepSize = 1.0f;
 	int Hatching::NumOptiSteps = 4;
 	float Hatching::OptiSeedWeight = 2.0f;
-	float Hatching::OptiSmoothWeight = 3.0f;
-	float Hatching::OptiFieldWeight = 1.0f;
-	float Hatching::OptiSpringWeight = 1.0f;
+	float Hatching::OptiSmoothWeight = 5.0f;
+	float Hatching::OptiFieldWeight = 3.0f;
+	float Hatching::OptiSpringWeight = 2.0f;
+
+	void Hatching::RecalculateConstants() {
+		Hatching::CollisionRadius = LineDistance * 0.7f;
+		Hatching::CoverRadius = LineDistance * 1.0f;
+		Hatching::TrimRadius = LineDistance * 0.7f;
+		Hatching::ExtendRadius = LineDistance * 1.2f;
+		Hatching::MergeRadius = LineDistance * 1.3f;
+	}
 
 	float getFaceArea(Face& face) {
 		glm::vec3 a = face.outer->origin->position;
@@ -35,8 +44,8 @@ namespace Copperplate {
 
 	Hatching::Hatching(int viewportWidth, int viewportHeight) {
 		m_ViewportSize = glm::vec2((float)viewportWidth, (float)viewportHeight);
-		int gridSizeX = (int)(m_ViewportSize.x / DisplaySettings::LineSeparationDistance) + 1;
-		int gridSizeY = (int)(m_ViewportSize.y / DisplaySettings::LineSeparationDistance) + 1;
+		int gridSizeX = (int)(m_ViewportSize.x / (LineDistance * 2.0f)) + 1;
+		int gridSizeY = (int)(m_ViewportSize.y / (LineDistance * 2.0f)) + 1;
 		m_GridSize = glm::ivec2(gridSizeX, gridSizeY);
 
 		m_VisibleSeedsGrid = std::vector<std::unordered_set<ScreenSpaceSeed*>>();
@@ -177,11 +186,12 @@ namespace Copperplate {
 			glm::vec2 pixPos1 = ViewToScreen(contourSegments[i]);
 			glm::vec2 pixPos2 = ViewToScreen(contourSegments[i + 1]);
 			float length = glm::distance(pixPos1, pixPos2);
-			int steps = ceil(length / (DisplaySettings::LineTestDistance * 0.8f));
+			int steps = ceil(length / (CollisionRadius * 0.8f));
 			for (int j = 0; j <= steps; j++) {
 				float p = j / (float)steps;
 				glm::vec2 pos = (1.0f - p) * pixPos1 + p * pixPos2;
-				AddCollisionPoint(pos, true, nullptr);
+				if(IsInBounds(pos))
+					AddCollisionPoint(pos, true, nullptr);
 			}
 		}
 	}
@@ -189,50 +199,13 @@ namespace Copperplate {
 	void Hatching::CreateHatchingLines() {
 		PrepareForHatching();
 
+		if (DisplaySettings::RegenerateHatching) {
+			m_HatchingLines.clear();
+			//DisplaySettings::RegenerateHatching = false;
+		}
+
 		UpdateHatchingLines();
-		/*std::queue<HatchingLine*> linesQueue;
-
-		if (m_HatchingLines.size() == 0) {
-			//start with highest importance seed point
-			ScreenSpaceSeed* start = &(m_ScreenSeeds[0]);
-			for (ScreenSpaceSeed& current : m_ScreenSeeds) {
-				if (current.m_Importance > start->m_Importance) {
-					start = &current;
-				}
-			}
-			//construct the first line
-			HatchingLine first = ConstructLine(start);
-			m_HatchingLines.push_back(first);
-			AddLineCollision(&m_HatchingLines.back());
-			linesQueue.push(&m_HatchingLines.back());
-		}
-		else {
-			UpdateHatchingLines();
-			for (auto it = m_HatchingLines.begin(); it != m_HatchingLines.end(); it++) {
-				linesQueue.push(&(*it));
-			}
-		}
-
-		if (!DisplaySettings::OnlyUpdateHatchLines){
-			HatchingLine* currentLine = linesQueue.front();
-			//Algorithm from Jobard and Lefer, 1997
-			while (linesQueue.size() >= 1) {
-				currentLine = linesQueue.front();
-				ScreenSpaceSeed* candidate;
-				if (FindSeedCandidate(candidate, currentLine)) {
-					HatchingLine newLine = ConstructLine(candidate);
-					m_HatchingLines.push_back(newLine);
-					AddLineCollision(&m_HatchingLines.back());
-					linesQueue.push(&m_HatchingLines.back());
-					//m_UnusedPoints.erase(candidate);
-					//CleanUnusedPoints();
-				}
-				else {
-					linesQueue.pop();
-				}
-			}
-			DisplaySettings::OnlyUpdateHatchLines = true; 
-		}*/
+		
 		FillGLBuffers();
 	}
 	
@@ -285,7 +258,7 @@ namespace Copperplate {
 
 		SnakesTrim();
 		SnakesExtend();
-		//TODO: SnakesMerge();
+		SnakesMerge();
 		
 		// Before creating new Lines we need to know which Seeds are not covered by a line
 		UpdateUnusedSeeds();
@@ -460,21 +433,25 @@ namespace Copperplate {
 			line.ExtendBack(extensionBack);
 
 			// Update associated Seeds of the line
+			std::unordered_set<ScreenSpaceSeed*> newSeedsUnique;
 			std::vector<ScreenSpaceSeed*> newSeeds;
 			for (glm::vec2 point : extensionFront) {
-				ScreenSpaceSeed* seed = FindNearbySeed(point, CoverRadius);
-				if (seed) {
-					newSeeds.push_back(seed);
+				std::vector<ScreenSpaceSeed*> currSeeds = FindSeedsInRadius(point, CoverRadius);
+				for (ScreenSpaceSeed* seed : currSeeds) {
+					if(newSeedsUnique.insert(seed).second)
+						newSeeds.push_back(seed);
 				}
 			}
 			std::reverse(newSeeds.begin(), newSeeds.end());
 			for (ScreenSpaceSeed* seed : oldSeeds) {
-				newSeeds.push_back(seed);
+				if (newSeedsUnique.insert(seed).second)
+					newSeeds.push_back(seed);
 			}
 			for (glm::vec2 point : extensionBack) {
-				ScreenSpaceSeed* seed = FindNearbySeed(point, CoverRadius);
-				if (seed) {
-					newSeeds.push_back(seed);
+				std::vector<ScreenSpaceSeed*> currSeeds = FindSeedsInRadius(point, CoverRadius);
+				for (ScreenSpaceSeed* seed : currSeeds) {
+					if (newSeedsUnique.insert(seed).second)
+						newSeeds.push_back(seed);
 				}
 			}
 			if (newSeeds.size() != oldSeeds.size()) {
@@ -487,6 +464,75 @@ namespace Copperplate {
 			//Update Line Collision if necessary
 			UpdateLineCollision(line);			
 		}
+	}
+
+	void Hatching::SnakesMerge() {
+		std::unordered_set<HatchingLine*> linesToDelete;
+		for (auto it = m_HatchingLines.begin(); it != m_HatchingLines.end(); it++) {
+			HatchingLine& line = *it;
+			if (linesToDelete.count(&line) == 0) {
+				// Find all Candidates for merging
+				std::vector<const CollisionPoint*> mergeCandidates;
+				std::vector<bool> candidatesToFront;
+				glm::vec2 front = line.getPoints().front();
+				glm::vec2 frontSecond =line.getPoints()[1];
+
+				std::vector<const CollisionPoint*> frontCandidates = FindMergeCandidates(front, frontSecond, &line);
+				for (const CollisionPoint* candidate : frontCandidates) {
+					if (linesToDelete.count(candidate->m_Line) == 0) {
+						mergeCandidates.push_back(candidate);
+						candidatesToFront.push_back(true);
+					}
+				}
+
+				glm::vec2 back = line.getPoints().back();
+				glm::vec2 backSecond = line.getPoints()[line.getPoints().size() - 2];
+
+				std::vector<const CollisionPoint*> backCandidates = FindMergeCandidates(back, backSecond, &line);
+				for (const CollisionPoint* candidate : backCandidates) {
+					if (linesToDelete.count(candidate->m_Line) == 0) {
+						mergeCandidates.push_back(candidate);
+						candidatesToFront.push_back(false);
+					}
+				}
+
+				// select the best merger candidate
+				if (!mergeCandidates.empty()) {
+					float bestScore = 0.0f;
+					HatchingLine* bestMerge = nullptr;
+					bool mergeToFront = false;
+					for(int i = 0; i < mergeCandidates.size(); i++){
+						const CollisionPoint* candidate = mergeCandidates[i];
+						bool candToFront = candidatesToFront[i];
+						float score = EvaluateMergeCandidate(line, candidate, candToFront);
+
+						if (score > bestScore) {
+							bestScore = score;
+							bestMerge = candidate->m_Line;
+							mergeToFront = candToFront;
+						}
+						//sanity check
+						assert(bestScore > 0.0f);
+					}					
+
+					//Merge the two lines, mark both original lines for removal
+					HatchingLine merged = line.CreateMerged(bestMerge, mergeToFront);
+					m_HatchingLines.push_back(merged);
+					linesToDelete.insert(&line);
+					linesToDelete.insert(bestMerge);
+				}
+			}
+		}
+		//clean up all the lines marked for removal
+		for (auto it = m_HatchingLines.begin(); it != m_HatchingLines.end();) {
+			if (linesToDelete.count(&(*it)) > 0) {
+				it = m_HatchingLines.erase(it);
+			}
+			else {
+				it++;
+			}
+		}
+
 	}
 
 	void Hatching::SnakesInsert() {
@@ -562,14 +608,12 @@ namespace Copperplate {
 		float eSeeds = 0.0f;
 		std::vector<ScreenSpaceSeed*> associatedSeeds = line.getSeedsForPoint(index);
 		for (ScreenSpaceSeed* seed : associatedSeeds) {
-			if (glm::distance(seed->m_Pos, pointPos) <= CoverRadius) { //ignore Seeds that are too far away to still be covered
-				float dist = glm::distance(pointPos, seed->m_Pos);
-				dist /= CoverRadius;
+			float dist = glm::distance(pointPos, seed->m_Pos);
+			dist /= CoverRadius;
 
-				//float energy = exp(-2.5f * dist * dist) * dist * dist;  //this tries to get away from seeds that are already somewhat far away from the line to free them up for neighbors or new lines
-				float energy = dist * dist;  //this just tries to stay close to the associated seeds
-				eSeeds += energy;
-			}
+			//float energy = exp(-2.5f * dist * dist) * dist * dist;  //this tries to get away from seeds that are already somewhat far away from the line to free them up for neighbors or new lines
+			float energy = dist * dist;  //this just tries to stay close to the associated seeds
+			eSeeds += energy;
 		}
 
 		//Compute Energy for Line Smoothness
@@ -645,12 +689,7 @@ namespace Copperplate {
 			// Add the new Collision Points
 			const std::deque<glm::vec2>& points = line.getPoints();
 			for (glm::vec2 point : points) {
-				if (IsInBounds(point)) {
-					glm::ivec2 gridPos = ScreenPosToGridPos(point);
-					std::unordered_set<CollisionPoint>& gridCell = *GetCollisionPoints(gridPos);
-					CollisionPoint colPoint = { point, false, (HatchingLine * const)(&line) };
-					gridCell.insert(colPoint);
-				}
+				AddCollisionPoint(point, false, (HatchingLine * const)(&line));
 			}
 			line.ResetChangedFlag();
 		}
@@ -694,18 +733,14 @@ namespace Copperplate {
 
 	void Hatching::UpdateLineSeeds(HatchingLine& line) {
 		// Find the new set of Seeds
+		std::unordered_set<ScreenSpaceSeed*> newSeedsUnique;
 		std::vector<ScreenSpaceSeed*> newSeeds;
 		const std::deque<glm::vec2>& points = line.getPoints();
 		for (glm::vec2 point : points) {
-			if (IsInBounds(point)) {
-				glm::ivec2 gridPos = ScreenPosToGridPos(point);
-				std::unordered_set<ScreenSpaceSeed*>& gridCell = *GetVisibleScreenSeeds(gridPos);
-				for (ScreenSpaceSeed* seed : gridCell) {
-					if (glm::distance(point, seed->m_Pos) < CoverRadius) {
-						// There might be a need to prevent adding the same Seed more than once, if the CoverRadius and ExtendRadius have a weird ratio
-						// For now this should be fine
-						newSeeds.push_back(seed);
-					}
+			std::vector<ScreenSpaceSeed*> closestSeeds = FindSeedsInRadius(point, CoverRadius);
+			for (ScreenSpaceSeed* seed : closestSeeds) {
+				if (newSeedsUnique.insert(seed).second) {
+					newSeeds.push_back(seed);
 				}
 			}
 		}
@@ -731,7 +766,7 @@ namespace Copperplate {
 		}
 	}
 
-	HatchingLine Hatching::ConstructLine(ScreenSpaceSeed* seed) { //This automatically removes any newly covered Seeds from the UnusedSeedGrid
+	HatchingLine Hatching::ConstructLine(ScreenSpaceSeed* seed) {
 		int maxPoints = DisplaySettings::NumPointsPerHatch;
 		if (maxPoints <= 0) maxPoints = 999999;
 		int pointsAdded = 0;
@@ -760,76 +795,22 @@ namespace Copperplate {
 			}
 		}
 		
-		//Find all Seed Points near the line
+		std::unordered_set<ScreenSpaceSeed*> seedsUnique;
 		std::vector<ScreenSpaceSeed*> associatedSeeds;
+
+		//Find all Seed Points near the line
 		for (glm::vec2 point : linePoints) {
-			ScreenSpaceSeed* newSeed = FindNearbySeed(point, CoverRadius);// FindSeedInRadius(currPos, CoverRadius);
-			if (newSeed) {
-				glm::ivec2 gridPos = ScreenPosToGridPos(newSeed->m_Pos);
-				m_NumUnusedSeeds -= GetUnusedScreenSeeds(gridPos)->erase(newSeed);
-				associatedSeeds.push_back(newSeed);
+			std::vector<ScreenSpaceSeed*> closestSeeds = FindSeedsInRadius(point, CoverRadius);
+			for (ScreenSpaceSeed* seed : closestSeeds) {
+				if (seedsUnique.insert(seed).second) {
+					glm::ivec2 gridPos = ScreenPosToGridPos(seed->m_Pos);
+					m_NumUnusedSeeds -= GetUnusedScreenSeeds(gridPos)->erase(seed);
+					associatedSeeds.push_back(seed);
+				}
 			}
 		}
 
 		return HatchingLine(linePoints, associatedSeeds, this);
-
-		/*
-		int maxPoints = DisplaySettings::NumPointsPerHatch;
-		if (maxPoints <= 0) maxPoints = 999999;
-
-		glm::vec2 dir;
-		glm::vec2 sampleDir;
-
-		std::vector<glm::vec2> linePoints;
-		
-		glm::vec2 currPos = seed->m_Pos;
-		linePoints.push_back(currPos);
-		dir = GetHatchingDir(currPos);
-
-		//Extrude Left
-		while (!HasCollision(currPos, false) && (linePoints.size() < maxPoints)) {
-			// Compute direction for next step
-			sampleDir = GetHatchingDir(currPos);
-			float diffAngle = glm::dot(dir, sampleDir);
-			if (diffAngle < 0) sampleDir = -sampleDir;
-			dir = sampleDir;
-
-			// Step in the computed direction, add point to line
-			currPos = currPos + (ExtendRadius * dir);
-			linePoints.push_back(currPos);
-		}
-		//Reverse the first half of the points
-		std::reverse(linePoints.begin(), linePoints.end());
-
-		dir = -GetHatchingDir(seed->m_Pos);
-		currPos = seed->m_Pos + (ExtendRadius * dir);
-		linePoints.push_back(currPos);
-		//Extrude Right
-		while (!HasCollision(currPos, false) && (linePoints.size() < (maxPoints * 2 + 1))) {
-			// Compute direction for next step
-			sampleDir = GetHatchingDir(currPos);
-			float diffAngle = glm::dot(dir, sampleDir);
-			if (diffAngle < 0) sampleDir = -sampleDir;
-			dir = sampleDir;
-
-			// Step in the computed direction, add point to line
-			currPos = currPos + (ExtendRadius * dir);
-			linePoints.push_back(currPos);
-		}
-
-		//Find all Seed Points near the line
-		std::vector<ScreenSpaceSeed*> associatedSeeds;
-		for (glm::vec2 point : linePoints) {
-			ScreenSpaceSeed* newSeed = FindNearbySeed(point, CoverRadius);// FindSeedInRadius(currPos, CoverRadius);
-			if (newSeed) {
-				glm::ivec2 gridPos = ScreenPosToGridPos(newSeed->m_Pos);
-				m_NumUnusedSeeds -= GetUnusedScreenSeeds(gridPos)->erase(newSeed);
-				associatedSeeds.push_back(newSeed);
-			}
-		}
-
-		return HatchingLine(linePoints, associatedSeeds, this);
-		*/
 	}
 	
 	std::vector<glm::vec2> Hatching::ExtendLine(glm::vec2 tip, glm::vec2 second) {
@@ -870,12 +851,103 @@ namespace Copperplate {
 		return newPoints;
 	}
 
+	std::vector<const CollisionPoint*> Hatching::FindMergeCandidates(glm::vec2 tip, glm::vec2 tipSecond, HatchingLine* line) {
+		std::vector<const CollisionPoint*> mergeCandidates;
+		glm::ivec2 gridCenter = ScreenPosToGridPos(tip);
+		for (int x = -1; x <= 1; x++) {
+			for (int y = -1; y <= 1; y++) {
+				glm::ivec2 gridPos = gridCenter + glm::ivec2(x, y);
+				if (gridPos.x >= 0 && gridPos.x < m_GridSize.x && gridPos.y >= 0 && gridPos.y < m_GridSize.y) {
+					std::unordered_set<CollisionPoint>* gridCell = GetCollisionPoints(gridPos);
+					for (auto gridIt = gridCell->begin(); gridIt != gridCell->end(); gridIt++) {
+						const CollisionPoint* colPoint = &(*gridIt);
+						HatchingLine* colLine = colPoint->m_Line;
+						if (!colPoint->m_isContour && colLine != line) {
+							float dist = glm::distance(tip, colPoint->m_Pos);
+
+							glm::vec2 candTip = colPoint->m_Pos;
+							glm::vec2 candSecond;
+							if (colLine->getPoints().front() == colPoint->m_Pos) {
+								candSecond = colLine->getPoints()[1];
+							}
+							else {
+								candSecond = colLine->getPoints()[colLine->getPoints().size() - 2];
+							}
+
+							glm::vec2 tipDir = glm::normalize(tip - tipSecond);
+							glm::vec2 newTipDir = glm::normalize(candTip - tipSecond);
+							glm::vec2 candDir = glm::normalize(candSecond - candTip);
+							glm::vec2 newCandDir = glm::normalize(candSecond - tip);
+							
+							if (dist < MergeRadius 
+								&& glm::dot(tipDir, newCandDir) > cos(ParallelAngle) 
+								&& glm::dot(newTipDir, candDir) > cos(ParallelAngle)) {
+								mergeCandidates.push_back(colPoint);
+							}
+						}
+					}
+				}
+			}
+		}
+		return mergeCandidates;
+	}
+
+	float Hatching::EvaluateMergeCandidate(const HatchingLine& line, const CollisionPoint* candidate, bool mergeToFront) {
+		HatchingLine* candLine = candidate->m_Line;
+		glm::vec2 candidateTip = candidate->m_Pos;
+		glm::vec2 candidateSecond;
+		if (candLine->getPoints().front() == candidateTip)
+			candidateSecond = candLine->getPoints()[1];
+		else
+			candidateSecond = candLine->getPoints()[candLine->getPoints().size() - 2];
+
+		glm::vec2 ownTip;
+		glm::vec2 ownSecond;
+		if (mergeToFront) {
+			ownTip = line.getPoints()[0];
+			ownSecond = line.getPoints()[1];
+		}
+		else {
+			ownTip = line.getPoints().back();
+			ownSecond = line.getPoints()[line.getPoints().size() - 2];
+		}
+
+		glm::vec2 ownDir = glm::normalize(ownTip - ownSecond);
+		glm::vec2 newOwnDir = glm::normalize(candidateTip - ownSecond);
+		glm::vec2 candDir = glm::normalize(candidateSecond - candidateTip);
+		glm::vec2 newCandDir = glm::normalize(candidateSecond - ownTip);
+
+		float straightScore = std::min(glm::dot(ownDir, newCandDir), glm::dot(candDir, newOwnDir)) - cos(ParallelAngle);
+		straightScore /= (1.0f - cos(ParallelAngle));
+		float closeScore = (MergeRadius - glm::distance(ownTip, candidateTip)) / (MergeRadius - CoverRadius);
+		float score = ExtendStraightVsCloseWeight * straightScore + (1 - ExtendStraightVsCloseWeight) * closeScore;
+		return score;
+	}
+
+	std::vector<ScreenSpaceSeed*> Hatching::FindSeedsInRadius(glm::vec2 point, float radius) {
+		std::vector<ScreenSpaceSeed*> out;
+		if (IsInBounds(point)) {
+			glm::ivec2 gridCenter = ScreenPosToGridPos(point);
+			for (int x = -1; x <= 1; x++) {
+				for (int y = -1; y <= 1; y++) {
+					glm::ivec2 gridPos = gridCenter + glm::ivec2(x, y);
+					std::unordered_set<ScreenSpaceSeed*>& gridCell = *GetVisibleScreenSeeds(gridPos);
+					for (ScreenSpaceSeed* seed : gridCell) {
+						if (glm::distance(point, seed->m_Pos) <= radius) {
+							out.push_back(seed);
+						}
+					}
+				}
+			}
+		}
+		return out;
+	}
+
 	///////////////////////////////
 	//  OLD STUFF BEFORE SNAKES  //
 	///////////////////////////////
 
 	bool Hatching::FindSeedCandidate(ScreenSpaceSeed*& out, HatchingLine* currentLine) {
-		// TODO: Rework this to make sure even seed points further away from a line get selected eventually
 		float closestDistance = 1000.0f;
 		bool foundCandidate = false;
 		ScreenSpaceSeed* candidate;
@@ -889,7 +961,7 @@ namespace Copperplate {
 					for (ScreenSpaceSeed* currSeed : gridCell) {
 						glm::vec2 compCoords = currSeed->m_Pos;
 						float dist = glm::distance(currentPoints[i], compCoords);
-						if (dist < closestDistance && dist >= DisplaySettings::LineSeparationDistance) {
+						if (dist < closestDistance && dist >= LineDistance) {
 							candidate = currSeed;
 							foundCandidate = true;
 							closestDistance = dist;
@@ -904,92 +976,6 @@ namespace Copperplate {
 		return foundCandidate;
 	}
 
-	// Create a single Hatching Line
-	/*HatchingLine Hatching::CreateLine(ScreenSpaceSeed* seed) {
-		//DEBUGGING
-		int maxPoints = DisplaySettings::NumPointsPerHatch;
-		if (maxPoints <= 0) maxPoints = 999999;
-		int pointsLeft = 0;
-
-		float maxAngle = CurvatureClampAngle;
-		float terminationAngle = CurvatureBreakAngle;
-		float stepsize = ExtendRadius;
-		float seedRadius = CoverRadius;
-		
-		glm::vec2 dir;
-		glm::vec2 sampleDir;
-
-		std::vector<glm::vec2> linePoints;
-		std::vector<ScreenSpaceSeed*> associatedSeeds;
-		int numPoints = 1;
-
-		std::vector<glm::vec2> leftPoints;
-		std::vector<ScreenSpaceSeed*> leftSeeds;
-
-		glm::vec2 currPos = seed->m_Pos;
-		leftPoints.push_back(currPos);
-		dir = GetHatchingDir(currPos);
-		
-		//extrude left
-		while (!HasCollision(currPos, false) && (pointsLeft < maxPoints)) {
-			// Add Collision for previous point
-			ScreenSpaceSeed* newSeed = FindNearbySeed(currPos, seedRadius);
-			if (newSeed) leftSeeds.push_back(newSeed);
-
-			// Compute Direction for next step
-			sampleDir = GetHatchingDir(currPos);
-			float diffAngle = glm::dot(dir, sampleDir);
-			if (diffAngle < 0) sampleDir = -sampleDir; // bring sampled direction into the right hemicircle
-			if (abs(diffAngle) < cos(terminationAngle)) break; // stop line if the bend would be more than terminatioAngle
-			dir = clampToMaxAngleDifference(sampleDir, dir, radToDeg(maxAngle)); // limit strength of bend to maxangle degrees per step
-			//dir = sampleDir;
-			
-			// Step in the computed direction, add point to line
-			currPos = currPos + (stepsize * dir);
-			leftPoints.push_back(currPos);
-			numPoints++;
-			pointsLeft++;
-		}
-		while (!leftPoints.empty()) {
-			linePoints.push_back(leftPoints.back());
-			leftPoints.pop_back();
-		}
-		while (!leftSeeds.empty()) {
-			associatedSeeds.push_back(leftSeeds.back());
-			leftSeeds.pop_back();
-		}
-
-		dir = -GetHatchingDir(seed->m_Pos);		
-		currPos = seed->m_Pos + (stepsize * dir);		
-		linePoints.push_back(currPos);
-		numPoints++;
-		//extrude right
-		while (!HasCollision(currPos, false) && (numPoints < (maxPoints*2 + 1))) {
-			// Add Collision for previous point
-			ScreenSpaceSeed* newSeed = FindNearbySeed(currPos, seedRadius);
-			if (newSeed) associatedSeeds.push_back(newSeed);
-
-			// Compute Direction for next step
-			sampleDir = GetHatchingDir(currPos);			
-			float diffAngle = glm::dot(dir, sampleDir);
-			if (diffAngle < 0) sampleDir = -sampleDir; // bring sampled direction into the right hemicircle
-			if (abs(diffAngle) < cos(terminationAngle)) break; // stop line if the bend would be more than terminatioAngle
-			dir = clampToMaxAngleDifference(sampleDir, dir, radToDeg(maxAngle)); // limit strength of bend to maxangle degrees per step
-			//dir = sampleDir;
-
-			// Step in the computed direction, add point to line
-			currPos = currPos + (stepsize * dir);
-			linePoints.push_back(currPos);
-			numPoints++;
-		}
-		return HatchingLine(linePoints, associatedSeeds, this);
-	}*/
-
-	void Hatching::AddLineCollision(HatchingLine* line) {
-		for (glm::vec2 point : line->getPoints()) {
-			AddCollisionPoint(point, false, line);
-		}
-	}
 
 	void Hatching::AddCollisionPoint(glm::vec2 screenPos, bool isContour, HatchingLine* line) {
 		if (!IsInBounds(screenPos))
@@ -1002,7 +988,7 @@ namespace Copperplate {
 		colGridCell.insert(newPoint);
 
 		// Remove colliding Seed Points
-		for (int x = -1; x <= 1; x++) {
+		/*for (int x = -1; x <= 1; x++) {
 			for (int y = -1; y <= 1; y++) {
 				glm::ivec2 currGridPos = gridPos + glm::ivec2(x, y);
 				if (currGridPos.x >= 0 && currGridPos.x < m_GridSize.x
@@ -1010,12 +996,12 @@ namespace Copperplate {
 					std::unordered_set<ScreenSpaceSeed*>& seedGridCell = *GetUnusedScreenSeeds(currGridPos);
 					for (auto it = seedGridCell.begin(); it != seedGridCell.end(); ) {
 						glm::vec2 seedPos = (*it)->m_Pos;
-						if (glm::distance(seedPos, screenPos) < DisplaySettings::LineTestDistance) it = seedGridCell.erase(it);
+						if (glm::distance(seedPos, screenPos) < CollisionRadius) it = seedGridCell.erase(it);
 						else ++it;
 					}
 				}
 			}
-		}
+		}*/
 	}
 
 	void Hatching::FillGLBuffers() {
@@ -1105,7 +1091,7 @@ namespace Copperplate {
 					std::unordered_set<CollisionPoint>& gridCell = *GetCollisionPoints(gridPos);
 					for (CollisionPoint point : gridCell) {
 						float dist = glm::distance(screenPos, point.m_Pos);
-						if (dist < DisplaySettings::LineTestDistance) {
+						if (dist < CollisionRadius) {
 							if(!onlyContours || point.m_isContour) return true;
 						}
 					}
@@ -1145,35 +1131,6 @@ namespace Copperplate {
 		return dir;
 	}
 
-	ScreenSpaceSeed* Hatching::FindNearbySeed(glm::vec2 screenPos, float maxDistance) { //This only finds Seeds in the UnusedSeedsGrid
-		if (!IsInBounds(screenPos))
-			return nullptr;
-
-		glm::ivec2 gridPos = ScreenPosToGridPos(screenPos);
-		float closestDist = 1000.0f;
-		ScreenSpaceSeed* result = nullptr;
-
-		for (int x = -1; x <= 1; x++) {
-			for (int y = -1; y <= 1; y++) {
-				glm::ivec2 currGridPos = gridPos + glm::ivec2(x, y);
-				if (currGridPos.x >= 0 && currGridPos.x < m_GridSize.x
-					&& currGridPos.y >= 0 && currGridPos.y < m_GridSize.y) {
-					//std::unordered_set<ScreenSpaceSeed*>& seedGridCell = *GetUnusedScreenSeeds(currGridPos); // no more
-					std::unordered_set<ScreenSpaceSeed*>& seedGridCell = *GetVisibleScreenSeeds(currGridPos);
-					for (ScreenSpaceSeed* seed : seedGridCell) {
-						glm::vec2 seedPos = seed->m_Pos;
-						float dist = glm::distance(seedPos, screenPos);
-						if (dist < maxDistance && dist < closestDist) {
-							closestDist = dist;
-							result = seed;
-						}
-					}
-				}
-			}
-		}
-		return result;
-	}
-
 	ScreenSpaceSeed* Hatching::GetScreenSeedById(unsigned int id) {
 		return m_ScreenSeedIdMap[id];
 	}
@@ -1186,8 +1143,8 @@ namespace Copperplate {
 	}
 
 	bool Hatching::IsInBounds(glm::vec2 screenPos) {
-		return (screenPos.x >= 0 && screenPos.x < m_ViewportSize.x
-			&& screenPos.y >= 0 && screenPos.y < m_ViewportSize.y);
+		return (screenPos.x > 0 && screenPos.x < m_ViewportSize.x
+			&& screenPos.y > 0 && screenPos.y < m_ViewportSize.y);
 	}
 	   
 }

@@ -25,6 +25,8 @@ namespace Copperplate {
 		HatchingLine* SplitFromOcclusion();
 		HatchingLine* SplitSharpBend();
 		HatchingLine* Split(int splitIndex);
+
+		HatchingLine CreateMerged(HatchingLine* other, bool mergeToFront);
 		
 		void RemoveFromFront(int count);
 		void RemoveFromBack(int count);
@@ -48,7 +50,7 @@ namespace Copperplate {
 		glm::vec2 getSegmentDir(int index);
 
 		const std::deque<glm::vec2>& getPoints() const { return m_Points; };
-		const std::deque<ScreenSpaceSeed*>& getSeeds() const { return m_AssociatedSeeds; };
+		const std::deque<ScreenSpaceSeed*>& getSeeds() const { return m_Seeds; };
 		const std::vector<glm::vec2> getPointsBeforeChange() const { return m_PointsBeforeChange; };
 
 
@@ -56,7 +58,7 @@ namespace Copperplate {
 		
 		int m_NumPoints;
 		std::deque<glm::vec2> m_Points;
-		std::deque<ScreenSpaceSeed*> m_AssociatedSeeds;
+		std::deque<ScreenSpaceSeed*> m_Seeds;
 		std::deque<int> m_SeedPlacements;
 		bool m_HasChanged;
 		std::vector<glm::vec2> m_PointsBeforeChange;

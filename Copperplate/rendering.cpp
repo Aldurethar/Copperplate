@@ -23,13 +23,11 @@ namespace Copperplate {
 	bool DisplaySettings::RenderSeedPoints = false;
 	bool DisplaySettings::RenderScreenSpaceSeeds = false;
 	bool DisplaySettings::RenderHatching = true;
-	bool DisplaySettings::OnlyUpdateHatchLines = false;
+	bool DisplaySettings::RegenerateHatching = false;
 	bool DisplaySettings::RenderHatchingCollision = false;
 	bool DisplaySettings::RenderCurrentDebug = true;
 	int DisplaySettings::NumHatchingLines = -1;
 	int DisplaySettings::NumPointsPerHatch = -1;
-	float DisplaySettings::LineSeparationDistance = 8.0f;
-	float DisplaySettings::LineTestDistance = 4.0f;
 	EHatchingDirections DisplaySettings::HatchingDirection = EHatchingDirections::HD_LargestCurvature;
 	EFramebuffers DisplaySettings::FramebufferToDisplay = EFramebuffers::FB_Default;
 
@@ -138,8 +136,6 @@ namespace Copperplate {
 
 	void Camera::SetViewportSize(int width, int height) {
 		m_ProjectionMatrix = glm::perspective(glm::radians(45.0f), (float) width / (float) height, 0.1f, 100.0f);
-		//Testing
-		//m_ProjectionMatrix = glm::identity<glm::mat4>();
 	}
 
 	void Camera::SetPosition(float azimuth, float height, float zoom) {

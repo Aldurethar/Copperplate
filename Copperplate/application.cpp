@@ -71,7 +71,7 @@ namespace Copperplate {
 			DisplaySettings::RenderHatching = !DisplaySettings::RenderHatching;
 		}
 		else if (key == GLFW_KEY_KP_5) {
-			DisplaySettings::OnlyUpdateHatchLines = !DisplaySettings::OnlyUpdateHatchLines;
+			DisplaySettings::RegenerateHatching = !DisplaySettings::RegenerateHatching;
 		}
 		else if (key == GLFW_KEY_KP_6) {
 			DisplaySettings::RenderHatchingCollision = !DisplaySettings::RenderHatchingCollision;
@@ -94,20 +94,16 @@ namespace Copperplate {
 			DisplaySettings::NumPointsPerHatch--;
 		}
 		else if (key == GLFW_KEY_PAGE_UP) {
-			DisplaySettings::LineSeparationDistance *= 1.2f;
-			std::cout << "Line Separation Distance is now " << DisplaySettings::LineSeparationDistance << std::endl;
+			Hatching::LineDistance *= 1.2f;
+			Hatching::RecalculateConstants();
+			DisplaySettings::RegenerateHatching = true;
+			std::cout << "Line Separation Distance is now " << Hatching::LineDistance << std::endl;
 		}
 		else if (key == GLFW_KEY_PAGE_DOWN) {
-			DisplaySettings::LineSeparationDistance /= 1.2f;
-			std::cout << "Line Separation Distance is now " << DisplaySettings::LineSeparationDistance << std::endl;
-		}
-		else if (key == GLFW_KEY_HOME) {
-			DisplaySettings::LineTestDistance *= 1.2f;
-			std::cout << "Line Test Distance is now " << DisplaySettings::LineTestDistance << std::endl;
-		}
-		else if (key == GLFW_KEY_END) {
-			DisplaySettings::LineTestDistance /= 1.2f;
-			std::cout << "Line Test Distance is now " << DisplaySettings::LineTestDistance << std::endl;
+			Hatching::LineDistance /= 1.2f;
+			Hatching::RecalculateConstants();
+			DisplaySettings::RegenerateHatching = true;
+			std::cout << "Line Separation Distance is now " << Hatching::LineDistance << std::endl;
 		}
 		else if (key == GLFW_KEY_1) {
 			DisplaySettings::FramebufferToDisplay = EFramebuffers::FB_Default;

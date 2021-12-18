@@ -9,7 +9,7 @@
 
 namespace Copperplate {
 
-	const int SEEDS_PER_OBJECT = 8000;
+	const int SEEDS_PER_OBJECT = 16000;
 	const float Z_MIN = 0.1f;
 	const float Z_MAX = 50.0f;
 	const int COMPUTE_GROUPSIZE = 128;
