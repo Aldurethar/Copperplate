@@ -1,5 +1,4 @@
 #pragma once
-
 #include "core.h"
 #include <vector>
 #include <deque>
@@ -9,12 +8,12 @@ namespace Copperplate {
 
 	// Forward declaration
 	struct ScreenSpaceSeed;
-	class Hatching;
+	class HatchingLayer;
 
 	class HatchingLine {
 
 	public:
-		HatchingLine(const std::vector<glm::vec2>& points, const std::vector<ScreenSpaceSeed*>& seeds, Hatching* hatching);
+		HatchingLine(const std::vector<glm::vec2>& points, const std::vector<ScreenSpaceSeed*>& seeds, HatchingLayer& hatching);
 
 		void Resample();
 		void MovePointsTo(const std::deque<glm::vec2>& newPoints);
@@ -62,7 +61,7 @@ namespace Copperplate {
 		std::deque<int> m_SeedPlacements;
 		bool m_HasChanged;
 		std::vector<glm::vec2> m_PointsBeforeChange;
-		Hatching* m_Hatching;
+		HatchingLayer& m_Layer;
 		
 		void SetChangedFlag();
 		void SetPointsBeforeChange(const std::vector<glm::vec2>& points);

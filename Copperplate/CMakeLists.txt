@@ -9,6 +9,7 @@ set(SOURCE_LIST
 	rendering.h rendering.cpp
 	hatching.h hatching.cpp
 	hatchingline.h hatchingline.cpp
+	hatchinglayer.h hatchinglayer.cpp
 	image.h image.cpp
 	utility.h utility.cpp
 	shaders/flatcolor.vert
@@ -40,6 +41,9 @@ set(SOURCE_LIST
 	shaders/diffuse.frag
 	shaders/shadingGradient.vert
 	shaders/shadingGradient.frag
+	shaders/hatching.vert
+	shaders/hatching.geom
+	shaders/hatching.frag
 )
 
 # Setup as an executable

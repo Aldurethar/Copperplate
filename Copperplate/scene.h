@@ -75,6 +75,7 @@ namespace Copperplate {
 		SH_Movement,
 		SH_Diffuse,
 		SH_ShadingGradient,
+		SH_Hatching,
 	};
 
 	class Scene {
@@ -104,6 +105,7 @@ namespace Copperplate {
 		void DrawScreenSeeds(glm::vec3 color, float pointSize);
 		void DrawHatchingLines(EShaders shader, glm::vec3 color);
 		void DrawHatchingCollision(glm::vec3 color, float pointSize);
+		void DrawHatching(EShaders shader, glm::vec3 color);
 
 		Unique<Renderer> m_Renderer;
 		Shared<Hatching> m_Hatching;

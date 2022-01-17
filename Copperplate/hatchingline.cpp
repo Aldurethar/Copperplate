@@ -1,13 +1,12 @@
 #pragma once
-
 #include "hatchingline.h"
 #include "hatching.h"
 
 
 namespace Copperplate {
 
-	HatchingLine::HatchingLine(const std::vector<glm::vec2>& points, const std::vector<ScreenSpaceSeed*>& seeds, Hatching* hatching) {
-		m_Hatching = hatching;
+	HatchingLine::HatchingLine(const std::vector<glm::vec2>& points, const std::vector<ScreenSpaceSeed*>& seeds, HatchingLayer& hatching)
+	: m_Layer(hatching) {
 		m_NumPoints = points.size();
 		m_Points = std::deque<glm::vec2>();
 		m_Seeds = std::deque<ScreenSpaceSeed*>();
@@ -136,7 +135,7 @@ namespace Copperplate {
 		if (!m_Seeds.empty()) {
 			count = 0;
 			for (int i = 0; i < m_SeedPlacements.front(); i++) {
-				if (m_Hatching->HasCollision(m_Points[i], true)) {
+				if (m_Layer.HasCollision(m_Points[i], true)) {
 					count = i + 1;
 				}
 			}
@@ -155,7 +154,7 @@ namespace Copperplate {
 		if (!m_Seeds.empty()) {
 			count = 0;
 			for (int i = m_Points.size() - 1; i > m_SeedPlacements.back(); i--) {
-				if (m_Hatching->HasCollision(m_Points[i], true)) {
+				if (m_Layer.HasCollision(m_Points[i], true)) {
 					count = m_Points.size() - i;
 				}
 			}
@@ -166,7 +165,7 @@ namespace Copperplate {
 	HatchingLine* HatchingLine::SplitFromCollision() {
 		int collisionIndex = 0;
 		for (int i = m_SeedPlacements.front(); i <= m_SeedPlacements.back(); i++) {
-			if (m_Hatching->HasCollision(m_Points[i], true)) {
+			if (m_Layer.HasCollision(m_Points[i], true)) {
 				collisionIndex = i;
 				break;
 			}
@@ -236,7 +235,7 @@ namespace Copperplate {
 
 		RemoveFromBack(m_Points.size() - splitIndex);
 
-		HatchingLine* rest = new HatchingLine(restPoints, restSeeds, m_Hatching);
+		HatchingLine* rest = new HatchingLine(restPoints, restSeeds, m_Layer);
 		rest->SetPointsBeforeChange(m_PointsBeforeChange);
 
 		return rest;
@@ -277,7 +276,7 @@ namespace Copperplate {
 			newSeeds.insert(newSeeds.end(), other->getSeeds().rbegin(), other->getSeeds().rend());
 		}
 
-		return HatchingLine(newPoints, newSeeds, m_Hatching);
+		return HatchingLine(newPoints, newSeeds, m_Layer);
 	}
 
 	bool HatchingLine::NeedsResampling() {
@@ -300,7 +299,7 @@ namespace Copperplate {
 
 	bool HatchingLine::HasMiddleCollision() {
 		for (int i = m_SeedPlacements.front(); i <= m_SeedPlacements.back(); i++) {
-			if (m_Hatching->HasCollision(m_Points[i], true)) {
+			if (m_Layer.HasCollision(m_Points[i], true)) {
 				return true;
 			}
 		}

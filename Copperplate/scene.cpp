@@ -219,10 +219,10 @@ namespace Copperplate {
 		m_SceneObjects = std::vector<Unique<SceneObject>>();
 		//m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSmooth.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
 		//m_SceneObjects.push_back(CreateUnique<SceneObject>("Blob.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
-		m_SceneObjects.push_back(CreateUnique<SceneObject>("Sphere.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
+		//m_SceneObjects.push_back(CreateUnique<SceneObject>("Sphere.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
 		//numObjects++;
 		//m_SceneObjects[0]->Move(glm::vec3(3.0f, 0.0f, 0.0f));
-		//m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSubdiv.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
+		m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSubdiv.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
 		numObjects++;
 
 	}
@@ -289,7 +289,7 @@ namespace Copperplate {
 		m_Renderer->SwitchFrameBuffer(FB_Default, true);
 		glCheckError();
 		for (auto& object : m_SceneObjects) {			
-			DrawFlatColor(object, glm::vec3(1.0f));
+			//DrawFlatColor(object, glm::vec3(1.0f));
 			ExtractContours(object);
 			TransformSeedPoints(object);
 			if (DisplaySettings::RenderContours) 
@@ -302,8 +302,10 @@ namespace Copperplate {
 
 		if (DisplaySettings::RenderScreenSpaceSeeds)
 			DrawScreenSeeds(glm::vec3(0.13f, 0.67f, 0.27f), 4.0f);
-		if (DisplaySettings::RenderHatching) 
-			DrawHatchingLines(SH_HatchingLines, glm::vec3(0.16f, 0.37f, 0.74f));
+		if (DisplaySettings::RenderHatching)
+			//DrawHatchingLines(SH_HatchingLines, glm::vec3(0.16f, 0.37f, 0.74f));
+			//DrawHatching(SH_Hatching, glm::vec3(0.8f, 0.4f, 0.2f));
+			DrawHatching(SH_Hatching, glm::vec3(0.0f));
 		if (DisplaySettings::RenderHatchingCollision)
 			DrawHatchingCollision(glm::vec3(0.9f, 0.3f, 0.7f), 3.0f);
 		
@@ -366,6 +368,9 @@ namespace Copperplate {
 
 		Shared<Shader> shadingGrad = CreateShared<Shader>(ST_VertFrag, "shaders/shadingGradient.vert", nullptr, "shaders/shadingGradient.frag");
 		m_Shaders[SH_ShadingGradient] = shadingGrad;
+
+		Shared<Shader> hatching = CreateShared<Shader>(ST_VertGeomFrag, "shaders/hatching.vert", "shaders/hatching.geom", "shaders/hatching.frag");
+		m_Shaders[SH_Hatching] = hatching;
 	}
 
 	void Scene::UpdateUniforms() {
@@ -397,7 +402,7 @@ namespace Copperplate {
 		m_Shaders[SH_Diffuse]->SetVec3("lightDirection", m_LightDir);
 
 		m_Shaders[SH_ShadingGradient]->SetFloat("sigma", 2.0f);
-
+		
 		m_ComputeShaders[SH_TransformSeeds]->SetMat4("view", m_Camera->GetViewMatrix());
 		m_ComputeShaders[SH_TransformSeeds]->SetMat4("projection", m_Camera->GetProjectionMatrix());
 		glCheckError();
@@ -475,7 +480,7 @@ namespace Copperplate {
 		m_Shaders[shader]->Use();
 		glDisable(GL_DEPTH_TEST);
 		glLineWidth(2.0f);
-		m_Hatching->DrawHatchingLines();
+		m_Hatching->DrawHatchingLines(m_Shaders[shader]);
 	}
 
 	void Scene::DrawHatchingCollision(glm::vec3 color, float pointSize) {
@@ -485,4 +490,11 @@ namespace Copperplate {
 		m_Hatching->DrawCollisionPoints();
 	}
 
+	void Scene::DrawHatching(EShaders shader, glm::vec3 color) {
+		m_Shaders[shader]->SetVec3("color", color);
+		m_Shaders[shader]->Use();
+		m_Renderer->UseFrameBufferTexture(EFramebuffers::FB_Diffuse);
+		glDisable(GL_DEPTH_TEST);
+		m_Hatching->DrawHatchingLines(m_Shaders[shader]);
+	}
 }
