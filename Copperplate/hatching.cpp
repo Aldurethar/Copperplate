@@ -5,32 +5,11 @@
 #include <random>
 #include <queue>
 
+float GridCellSize = 8.0f;
+
 namespace Copperplate {
 
-	float Hatching::LineDistance =		4.0f;
-	float Hatching::CollisionRadius =	LineDistance * 0.7f;
-	float Hatching::CoverRadius =		LineDistance * 1.0f;
-	float Hatching::TrimRadius =		LineDistance * 0.7f;
-	float Hatching::ExtendRadius =		LineDistance * 1.2f;
-	float Hatching::MergeRadius =		LineDistance * 1.3f;
-	float Hatching::SplitAngle =		degToRad(20);
-	float Hatching::ParallelAngle =		degToRad(10);
-	float Hatching::ExtendStraightVsCloseWeight = 0.8f;
-	float Hatching::OptiStepSize = 1.0f;
-	int Hatching::NumOptiSteps = 4;
-	float Hatching::OptiSeedWeight = 2.0f;
-	float Hatching::OptiSmoothWeight = 5.0f;
-	float Hatching::OptiFieldWeight = 3.0f;
-	float Hatching::OptiSpringWeight = 2.0f;
-
-	void Hatching::RecalculateConstants() {
-		Hatching::CollisionRadius = LineDistance * 0.7f;
-		Hatching::CoverRadius = LineDistance * 1.0f;
-		Hatching::TrimRadius = LineDistance * 0.7f;
-		Hatching::ExtendRadius = LineDistance * 1.2f;
-		Hatching::MergeRadius = LineDistance * 1.3f;
-	}
-
+	
 	float getFaceArea(Face& face) {
 		glm::vec3 a = face.outer->origin->position;
 		glm::vec3 b = face.outer->next->origin->position;
@@ -43,8 +22,8 @@ namespace Copperplate {
 
 	Hatching::Hatching(int viewportWidth, int viewportHeight) {
 		m_ViewportSize = glm::vec2((float)viewportWidth, (float)viewportHeight);
-		int gridSizeX = (int)(m_ViewportSize.x / (LineDistance * 2.0f)) + 1;
-		int gridSizeY = (int)(m_ViewportSize.y / (LineDistance * 2.0f)) + 1;
+		int gridSizeX = (int)(m_ViewportSize.x / GridCellSize) + 1;
+		int gridSizeY = (int)(m_ViewportSize.y / GridCellSize) + 1;
 		m_GridSize = glm::ivec2(gridSizeX, gridSizeY);
 
 		m_VisibleSeedsGrid = std::vector<std::unordered_set<ScreenSpaceSeed*>>();
@@ -61,10 +40,14 @@ namespace Copperplate {
 		m_GradientData = CreateUnique<Image>(m_ViewportSize.x, m_ViewportSize.y);
 		m_MovementData = CreateUnique<Image>(m_ViewportSize.x, m_ViewportSize.y);
 
+		/* Setup Hatching Layers and their parameters*/
 		m_Layers = std::vector<Unique<HatchingLayer>>();
-		m_Layers.push_back(CreateUnique<HatchingLayer>(m_GridSize, *this, 1.0f, 3.0f, 0.0f, 0.3f, EHatchingDirections::HD_LargestCurvature));
-		m_Layers.push_back(CreateUnique<HatchingLayer>(m_GridSize, *this, 1.0f, 3.0f, 0.3f, 0.6f, EHatchingDirections::HD_Tangent));
-		m_Layers.push_back(CreateUnique<HatchingLayer>(m_GridSize, *this, 1.0f, 3.0f, 0.6f, 0.9f, EHatchingDirections::HD_ShadeNormal));
+		HatchingSettings settings(3.0f, 20.0f, 10.0f, 1.5f, 3.0f, 0.0f, 0.4f, HD_LargestCurvature);
+		m_Layers.push_back(CreateUnique<HatchingLayer>(m_GridSize, *this, settings));
+		settings = HatchingSettings(3.0f, 20.0f, 10.0f, 1.5f, 3.0f, 0.4f, 0.7f, HD_ShadeNormal);
+		m_Layers.push_back(CreateUnique<HatchingLayer>(m_GridSize, *this, settings));
+		//settings = HatchingSettings(3.0f, 20.0f, 10.0f, 1.5f, 3.0f, 0.7f, 1.0f, HD_ShadeNormal);
+		//m_Layers.push_back(CreateUnique<HatchingLayer>(m_GridSize, *this, settings));
 		
 		// setup opengl buffers
 		// Screen Space Seed Points
@@ -204,6 +187,25 @@ namespace Copperplate {
 		return ViewToScreen(glm::vec2(m_MovementData->Sample(point)));
 	}
 
+	void Hatching::SetLayer1Direction(EHatchingDirections newDir) {
+		m_Layers.front()->m_Settings.m_Direction = newDir;
+	}
+
+	void Hatching::measureHatchingDensity(int numPoints, float radius) {
+		std::map<int, int> histogram;
+		HaltonSequence xSequence(5);
+		HaltonSequence ySequence(7);
+		for (int i = 0; i < numPoints; i++) {
+			glm::vec2 pos = ViewToScreen(glm::vec2(xSequence.NextNumber(), ySequence.NextNumber()));
+			int count = m_Layers.front()->CountNearbyColPoints(pos, radius);
+			histogram[count] = histogram[count] + 1;
+		}
+		std::cout << "Histogram of point counts for " << numPoints << " Points, radius " << radius << std::endl;
+		for (auto& elem : histogram) {
+			std::cout << elem.first << " Points: " << elem.second << " Times" << std::endl;
+		}
+	}
+
 	// PRIVATE FUNCTIONS //
 		
 	void Hatching::PrepareForHatching() {
@@ -216,7 +218,7 @@ namespace Copperplate {
 		for (ScreenSpaceSeed& seed : m_ScreenSeeds) {
 			//TODO: is it a problem if i dont check for collision here?
 			//if (seed.m_Visible && !HasCollision(seed.m_Pos, true)) {
-			if (seed.m_Visible) {
+			if (seed.m_Visible && IsInBounds(seed.m_Pos)) {
 				glm::ivec2 gridPos = ScreenPosToGridPos(seed.m_Pos);
 				GetVisibleScreenSeeds(gridPos)->insert(&seed);
 			}

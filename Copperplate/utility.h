@@ -1,5 +1,7 @@
 #pragma once
 #include <glm\ext\vector_float2.hpp>
+#include <glm\ext\vector_int2.hpp>
+#include <string>
 
 namespace Copperplate {
 
@@ -12,6 +14,12 @@ namespace Copperplate {
 	float radToDeg(float rad);
 
 	glm::vec2 clampToMaxAngleDifference(glm::vec2 vec, glm::vec2 base, float angle);
+
+	void writePngImage(const std::string& path, glm::ivec2 size, unsigned char* data, int channels);
+
+	unsigned int loadTextureFile(const std::string& path, int& widthOut, int& heightOut, int& nrChannelsOut);
+
+	std::string currTimeToString();
 
 	class HaltonSequence {
 	public:

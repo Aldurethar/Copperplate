@@ -13,11 +13,13 @@ namespace Copperplate {
 	const float Z_MIN = 0.1f;
 	const float Z_MAX = 50.0f;
 	const int COMPUTE_GROUPSIZE = 128;
+	const std::string SCREENSHOT_PATH = "screenshots/";
+	const std::string VIDEO_PATH = "video/";
 	
 	class SceneObject {
 	public:
 
-		SceneObject(std::string meshFile, Shared<Shader> shader, int id, Shared<Hatching> hatching);
+		SceneObject(std::string meshFile, Shared<Shader> shader, int id, Shared<SceneObject> parent, Shared<Hatching> hatching);
 
 		void Draw();
 
@@ -36,6 +38,12 @@ namespace Copperplate {
 		std::vector<glm::vec2>& GetContourSegments();
 
 		void Move(glm::vec3 translation);
+		void SetPos(glm::vec3 position);
+
+		void Rotate(glm::vec3 axis, float angle);
+		void SetRot(glm::vec3 axis, float angle);
+
+		glm::mat4 getTransform();
 
 	private:
 
@@ -44,12 +52,14 @@ namespace Copperplate {
 		Unique<Mesh> m_Mesh;
 		Shared<Shader> m_Shader;
 		Shared<Hatching> m_Hatching;
+		Shared<SceneObject> m_Parent;
 		int m_Id;
 		glm::mat4 m_Transform;
 		glm::mat4 m_PrevTransform;
+		glm::mat4 m_LocalTransform;
 		std::vector<SeedPoint> m_SeedPoints;
 		std::vector<glm::vec2> m_ContourSegments;
-
+		
 		unsigned int m_SeedsVAO;
 		unsigned int m_SeedsVertexBuffer;
 		unsigned int m_SeedsSSBO;
@@ -83,22 +93,28 @@ namespace Copperplate {
 
 		Scene(Shared<Window> window);
 
+		void Update();
 		void Draw();
 
 		void MoveCamera(float x, float y, float z);
 		void ViewportSizeChanged(int newWidth, int newHeight);
+
+		//DEBUG
+		void SetLayer1Direction(EHatchingDirections newDir);
+		void CreateDensityHistogram();
+		void ExampleAnimation();
 
 	private:
 
 		void CreateShaders();
 		void UpdateUniforms();
 
-		void DrawObject(const Unique<SceneObject>& object, EShaders shader);
-		void DrawFlatColor(const Unique<SceneObject>& object, glm::vec3 color);
-		void ExtractContours(const Unique<SceneObject>& object);
-		void DrawContours(const Unique<SceneObject>& object,  glm::vec3 color);
-		void DrawSeedPoints(const Unique<SceneObject>& object, glm::vec3 color, float pointSize);
-		void TransformSeedPoints(const Unique<SceneObject>& object);
+		void DrawObject(const Shared<SceneObject>& object, EShaders shader);
+		void DrawFlatColor(const Shared<SceneObject>& object, glm::vec3 color);
+		void ExtractContours(const Shared<SceneObject>& object);
+		void DrawContours(const Shared<SceneObject>& object,  glm::vec3 color);
+		void DrawSeedPoints(const Shared<SceneObject>& object, glm::vec3 color, float pointSize);
+		void TransformSeedPoints(const Shared<SceneObject>& object);
 		void DrawFramebufferContent(EFramebuffers framebuffer);
 		void DrawFramebufferAlpha(EFramebuffers framebuffer);
 		void DrawFullScreen(EShaders shader, EFramebuffers sourceTex);
@@ -106,6 +122,9 @@ namespace Copperplate {
 		void DrawHatchingLines(EShaders shader, glm::vec3 color);
 		void DrawHatchingCollision(glm::vec3 color, float pointSize);
 		void DrawHatching(EShaders shader, glm::vec3 color);
+		
+		unsigned int m_DebugTexture;
+		unsigned int m_FrameNumber;
 
 		Unique<Renderer> m_Renderer;
 		Shared<Hatching> m_Hatching;
@@ -113,7 +132,7 @@ namespace Copperplate {
 		glm::vec3 m_LightDir;
 		std::map<EShaders, Shared<Shader>> m_Shaders;
 		std::map<EShaders, Shared<ComputeShader>> m_ComputeShaders;
-		std::vector<Unique<SceneObject>> m_SceneObjects;
+		std::vector<Shared<SceneObject>> m_SceneObjects;
 
 	};
 }

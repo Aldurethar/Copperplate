@@ -47,7 +47,7 @@ void main(){
 		if(screenPos.x < 0.0 || screenPos.x > 1.0) inbounds = 0;
 		if(screenPos.y < 0.0 || screenPos.y > 1.0) inbounds = 0;
 
-		float depth = clipPos.z * 0.5 + 0.5;
+		float depth = (clipPos.z / clipPos.w) * 0.5 + 0.5;
 
 		float testDepth = texture(Depth, screenPos).r;
 		int keep;

@@ -2,6 +2,9 @@
 
 #include "scene.h"
 #include "core.h"
+#include "utility.h"
+#include "statistics.h"
+#include <glm\gtx\transform.hpp>
 
 namespace Copperplate {
 
@@ -16,12 +19,17 @@ namespace Copperplate {
 	};
 
 	//SCENEOBJECT IMPLEMENTATION
-	SceneObject::SceneObject(std::string meshFile, Shared<Shader> shader, int id, Shared<Hatching> hatching) {
+	SceneObject::SceneObject(std::string meshFile, Shared<Shader> shader, int id, Shared<SceneObject> parent, Shared<Hatching> hatching) {
 		m_Mesh = MeshCreator::ImportMesh(meshFile);
 		m_Shader = shader;
 		m_Id = id;
 		m_Hatching = hatching;
-		m_Transform = glm::mat4(1.0f);
+		m_Parent = parent;
+		m_LocalTransform = glm::mat4(1.0f);
+		if (m_Parent)
+			m_Transform = m_Parent->getTransform();
+		else
+			m_Transform = glm::mat4(1.0f);
 		m_PrevTransform = m_Transform;
 
 		//Create Seed Points for Hatching Strokes
@@ -107,6 +115,10 @@ namespace Copperplate {
 
 	void SceneObject::Update() {
 		m_PrevTransform = m_Transform;
+		if (m_Parent)
+			m_Transform = m_LocalTransform * m_Parent->getTransform();
+		else
+			m_Transform = m_LocalTransform;
 	}
 
 	void SceneObject::ExtractContours() {
@@ -197,9 +209,26 @@ namespace Copperplate {
 		return m_ContourSegments;
 	}
 
-	void SceneObject::Move(glm::vec3 translation)
-	{
-		m_Transform[3] += glm::vec4(translation, 0.0f);
+	void SceneObject::Move(glm::vec3 translation) {
+		m_LocalTransform[3] += glm::vec4(translation, 0.0f);
+	}
+
+	void SceneObject::SetPos(glm::vec3 position) {
+		m_LocalTransform[3] = glm::vec4(position, 1.0f);
+	}
+
+	void SceneObject::Rotate(glm::vec3 axis, float angle) {
+		m_LocalTransform = glm::rotate(m_LocalTransform, angle, axis);
+	}
+
+	void SceneObject::SetRot(glm::vec3 axis, float angle) {
+		glm::vec4 translation = m_LocalTransform[3];
+		m_LocalTransform = glm::rotate(angle, axis);
+		m_LocalTransform[3] = translation;
+	}
+	
+	glm::mat4 SceneObject::getTransform() {
+		return m_Transform;
 	}
 		
 	//SCENE IMPLEMENTATION
@@ -216,15 +245,51 @@ namespace Copperplate {
 		
 		//Create the Scene Objects
 		int numObjects = 1;
-		m_SceneObjects = std::vector<Unique<SceneObject>>();
-		//m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSmooth.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
-		//m_SceneObjects.push_back(CreateUnique<SceneObject>("Blob.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
-		//m_SceneObjects.push_back(CreateUnique<SceneObject>("Sphere.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
-		//numObjects++;
-		//m_SceneObjects[0]->Move(glm::vec3(3.0f, 0.0f, 0.0f));
-		m_SceneObjects.push_back(CreateUnique<SceneObject>("SuzanneSubdiv.obj", m_Shaders[SH_Contours], numObjects, m_Hatching));
+		m_SceneObjects = std::vector<Shared<SceneObject>>();
+		//Full Scene Version
+		/*
+		m_SceneObjects.push_back(CreateShared<SceneObject>("Plane.obj", m_Shaders[SH_Contours], numObjects, nullptr, m_Hatching));
+		m_SceneObjects.back()->Move(glm::vec3(0.0f, -0.5f, -4.0f));
 		numObjects++;
+		m_SceneObjects.push_back(CreateShared<SceneObject>("BunnySmoothed.obj", m_Shaders[SH_Contours], numObjects, nullptr, m_Hatching));
+		m_SceneObjects.back()->Move(glm::vec3(-1.0f, 0.0f, 0.0f));
+		numObjects++;
+		m_SceneObjects.push_back(CreateShared<SceneObject>("Teapot.obj", m_Shaders[SH_Contours], numObjects, nullptr, m_Hatching));
+		m_SceneObjects.back()->Move(glm::vec3(1.0f, -0.5f, 0.3f));
+		numObjects++;
+		m_SceneObjects.push_back(CreateShared<SceneObject>("Blob.obj", m_Shaders[SH_Contours], numObjects, nullptr, m_Hatching));
+		m_SceneObjects.back()->Move(glm::vec3(0.0f, 0.3f, -2.0f));
+		numObjects++;*/
+		//Single Objects
+		//m_SceneObjects.push_back(CreateShared<SceneObject>("Blob.obj", m_Shaders[SH_Contours], numObjects, nullptr, m_Hatching));
+		//m_SceneObjects.push_back(CreateShared<SceneObject>("Sphere.obj", m_Shaders[SH_Contours], numObjects, nullptr, m_Hatching));
+		//m_SceneObjects.push_back(CreateShared<SceneObject>("Bunny.obj", m_Shaders[SH_Contours], numObjects, nullptr, m_Hatching));
+		//numObjects++;
+		//m_SceneObjects[0]->Move(glm::vec3(1.5f, 0.0f, 0.0f));
+		//m_SceneObjects.push_back(CreateShared<SceneObject>("BunnySmoothed.obj", m_Shaders[SH_Contours], numObjects, nullptr, m_Hatching));
+		//m_SceneObjects.push_back(CreateShared<SceneObject>("Teapot.obj", m_Shaders[SH_Contours], numObjects, nullptr, m_Hatching));
+		//m_SceneObjects.push_back(CreateShared<SceneObject>("Plane.obj", m_Shaders[SH_Contours], numObjects, nullptr, m_Hatching));
+		//m_SceneObjects[0]->Move(glm::vec3(0.0f, -0.5f, 0.0f));
+		//m_SceneObjects.push_back(CreateShared<SceneObject>("LucyRotSub.obj", m_Shaders[SH_Contours], numObjects, nullptr, m_Hatching));
+		//numObjects++;
+		//m_SceneObjects.push_back(CreateShared<SceneObject>("SuzanneSubdiv.obj", m_Shaders[SH_Contours], numObjects, m_SceneObjects[0], m_Hatching));
+		//m_SceneObjects[1]->Move(glm::vec3(0.0f, 1.0f, 0.0f));
+		m_SceneObjects.push_back(CreateShared<SceneObject>("dragon.obj", m_Shaders[SH_Contours], numObjects, nullptr, m_Hatching));
+		m_SceneObjects[0]->Move(glm::vec3(0.0f, 0.1f, 0.0f));
+		numObjects++;
+		
 
+		//Load debug texture
+		int width, height, channels;
+		m_DebugTexture = loadTextureFile("Paper.png", width, height, channels);
+
+	}
+
+	void Scene::Update() {
+		m_FrameNumber++;
+		float amountMoved = sin((float)m_FrameNumber * 0.3f);
+		//m_SceneObjects[0]->SetPos(glm::vec3(amountMoved, -0.5f, 0.0f));
+		//m_SceneObjects[1]->SetRot(glm::vec3(0.0f, 0.0f, 1.0f), amountMoved);
 	}
 
 	void Scene::Draw() {
@@ -278,16 +343,25 @@ namespace Copperplate {
 		for (auto& object : m_SceneObjects) {
 			DrawObject(object, SH_Diffuse);
 		}
-
+		
 		//Shading Gradient
 		m_Renderer->SwitchFrameBuffer(FB_ShadingGradient, true);
 		glCheckError();
 		DrawFullScreen(SH_ShadingGradient, FB_Diffuse);
 		m_Hatching->GrabGradientData();
 
+		//DEBUG
+		//m_Renderer->SwitchFrameBuffer(FB_Diffuse, true);
+		//m_Shaders[SH_DisplayTex]->Use();
+		//glDisable(GL_DEPTH_TEST);
+		//m_Renderer->DrawTexFullscreen(m_DebugTexture);
+
 		//Draw the Objects
 		m_Renderer->SwitchFrameBuffer(FB_Default, true);
 		glCheckError();
+		m_Shaders[SH_DisplayTex]->Use();
+		glDisable(GL_DEPTH_TEST);
+		m_Renderer->DrawTexFullscreen(m_DebugTexture);
 		for (auto& object : m_SceneObjects) {			
 			//DrawFlatColor(object, glm::vec3(1.0f));
 			ExtractContours(object);
@@ -295,7 +369,7 @@ namespace Copperplate {
 			if (DisplaySettings::RenderContours) 
 				DrawContours(object, glm::vec3(0.0f));
 			if (DisplaySettings::RenderSeedPoints) 
-				DrawSeedPoints(object, glm::vec3(0.89f, 0.37f, 0.27f), 8.0f);
+				DrawSeedPoints(object, glm::vec3(0.89f, 0.37f, 0.27f), 4.0f);
 		}
 
 		m_Hatching->CreateHatchingLines();
@@ -304,13 +378,28 @@ namespace Copperplate {
 			DrawScreenSeeds(glm::vec3(0.13f, 0.67f, 0.27f), 4.0f);
 		if (DisplaySettings::RenderHatching)
 			//DrawHatchingLines(SH_HatchingLines, glm::vec3(0.16f, 0.37f, 0.74f));
-			//DrawHatching(SH_Hatching, glm::vec3(0.8f, 0.4f, 0.2f));
+			//glLineWidth(2.0f);
+			//DrawHatching(SH_HatchingLines, glm::vec3(0.8f, 0.4f, 0.2f));
 			DrawHatching(SH_Hatching, glm::vec3(0.0f));
 		if (DisplaySettings::RenderHatchingCollision)
 			DrawHatchingCollision(glm::vec3(0.9f, 0.3f, 0.7f), 3.0f);
 		
 		if (DisplaySettings::FramebufferToDisplay != EFramebuffers::FB_Default)
 			DrawFramebufferContent(DisplaySettings::FramebufferToDisplay);
+
+		if (DisplaySettings::RecordScreenShot) {
+			DisplaySettings::RecordScreenShot = false;			
+			std::string path = SCREENSHOT_PATH + currTimeToString() + ".png";
+			m_Renderer->SaveCurrFramebufferContent(path);
+			std::cout << "Saved Screenshot " << path << std::endl;
+		}
+
+		if (DisplaySettings::RecordVideo) {
+			std::string path = VIDEO_PATH + std::to_string(DisplaySettings::RecordFrameCount) + ".png";
+			m_Renderer->SaveCurrFramebufferContent(path);
+			std::cout << "Saved Video Frame " << DisplaySettings::RecordFrameCount << std::endl;
+			DisplaySettings::RecordFrameCount++;
+		}
 
 	}
 
@@ -320,6 +409,25 @@ namespace Copperplate {
 
 	void Scene::ViewportSizeChanged(int newWidth, int newHeight) {
 		m_Camera->SetViewportSize(newWidth, newHeight);
+	}
+
+	void Scene::SetLayer1Direction(EHatchingDirections newDir) {
+		m_Hatching->SetLayer1Direction(newDir);
+	}
+
+	void Scene::CreateDensityHistogram() {
+		m_Hatching->measureHatchingDensity(3000, 8.0f);
+	}
+
+	void Scene::ExampleAnimation() {
+		static int frame = 0;
+		if (frame >= 10 && frame < 40) {
+			m_Camera->Move(-0.05f, 0.0f, 0.0f);
+		}
+		if (frame < 50) {
+			Statistics::Get().printLastFrame();
+			frame++;
+		}
 	}
 
 	void Scene::CreateShaders() {
@@ -408,26 +516,28 @@ namespace Copperplate {
 		glCheckError();
 	}
 
-	void Scene::DrawObject(const Unique<SceneObject>& object, EShaders shader) {
+	void Scene::DrawObject(const Shared<SceneObject>& object, EShaders shader) {
 		object->SetShader(m_Shaders[shader]);
 		glEnable(GL_DEPTH_TEST);
 		object->Draw();
 	}
 
-	void Scene::DrawFlatColor(const Unique<SceneObject>& object, glm::vec3 color) {
+	void Scene::DrawFlatColor(const Shared<SceneObject>& object, glm::vec3 color) {
 		m_Shaders[SH_Flatcolor]->SetVec3("color", color);
 		object->SetShader(m_Shaders[SH_Flatcolor]);
 		glEnable(GL_DEPTH_TEST);
 		object->Draw();
 	}
 
-	void Scene::ExtractContours(const Unique<SceneObject>& object) {
+	void Scene::ExtractContours(const Shared<SceneObject>& object) {
+		TIME_FUNCTION(T_RenderContour);
 		object->SetShader(m_Shaders[SH_ExtractContours]);
 		m_Renderer->UseFrameBufferTexture(FB_Depth);
 		object->ExtractContours();
 	}
 
-	void Scene::DrawContours(const Unique<SceneObject>& object, glm::vec3 color) {
+	void Scene::DrawContours(const Shared<SceneObject>& object, glm::vec3 color) {
+		TIME_FUNCTION(T_RenderContour);
 		object->SetShader(m_Shaders[SH_Contours]);
 		m_Shaders[SH_Contours]->SetVec3("color", color);
 		glDisable(GL_DEPTH_TEST);
@@ -435,7 +545,7 @@ namespace Copperplate {
 		object->DrawContours();
 	}
 
-	void Scene::DrawSeedPoints(const Unique<SceneObject>& object, glm::vec3 color, float pointSize) {
+	void Scene::DrawSeedPoints(const Shared<SceneObject>& object, glm::vec3 color, float pointSize) {
 		m_Shaders[SH_Flatcolor]->SetVec3("color", color);
 		object->SetShader(m_Shaders[SH_Flatcolor]);
 		glEnable(GL_DEPTH_TEST);
@@ -443,7 +553,7 @@ namespace Copperplate {
 		object->DrawSeedPoints();
 	}
 
-	void Scene::TransformSeedPoints(const Unique<SceneObject>& object)
+	void Scene::TransformSeedPoints(const Shared<SceneObject>& object)
 	{		
 		m_ComputeShaders[SH_TransformSeeds]->Use();
 		m_Renderer->UseFrameBufferTexture(FB_Depth); 

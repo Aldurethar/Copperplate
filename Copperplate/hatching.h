@@ -22,25 +22,6 @@ namespace Copperplate {
 	class Hatching {
 		friend class HatchingLayer;
 	public:
-
-		//Constants
-		static float LineDistance;
-		static float CollisionRadius;
-		static float CoverRadius;
-		static float TrimRadius;
-		static float ExtendRadius;
-		static float MergeRadius;
-		static float SplitAngle;
-		static float ParallelAngle;
-		static float ExtendStraightVsCloseWeight;
-		static float OptiStepSize;
-		static int NumOptiSteps;
-		static float OptiSeedWeight;
-		static float OptiSmoothWeight;
-		static float OptiFieldWeight;
-		static float OptiSpringWeight;
-
-		static void RecalculateConstants();
 		
 		Hatching(int viewportWidth, int viewportHeight);
 	
@@ -66,7 +47,11 @@ namespace Copperplate {
 		glm::vec2 ViewToScreen(glm::vec2 screenPos);
 		glm::vec2 ScreenToView(glm::vec2 pixPos);
 
-		glm::vec2 SampleMovement(glm::vec2 point);
+		glm::vec2 SampleMovement(glm::vec2 point);	
+
+		//DEBUG
+		void SetLayer1Direction(EHatchingDirections newDir);
+		void measureHatchingDensity(int numPoints, float radius);
 
 	private:
 

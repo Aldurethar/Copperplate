@@ -37,6 +37,18 @@ void drawVertNormal(int vert){
 	EndPrimitive();
 }
 
+void emitEdge(vec2 screenPos1, vec2 screenPos2, int index1, int index2){
+	if((screenPos1.x > 0.0 && screenPos1.x < 1.0) || (screenPos2.y > 0.0 && screenPos2.y < 1.0)){
+		screenPos = screenPos1;
+		gl_Position = gl_in[index1].gl_Position;
+		EmitVertex();
+		screenPos = screenPos2;
+		gl_Position = gl_in[index2].gl_Position;
+		EmitVertex();
+		EndPrimitive();
+	}
+}
+
 void main(){
 
 	vec3 viewDir = vec3(0.0, 0.0, -1.0);
@@ -55,9 +67,12 @@ void main(){
 	float side2Front = sign(dot(side2Norm, viewDir));
 	float side3Front = sign(dot(side3Norm, viewDir));
 
-	float v0Depth = gl_in[0].gl_Position.z * 0.5 + 0.5;
-	float v2Depth = gl_in[2].gl_Position.z * 0.5 + 0.5;
-	float v4Depth = gl_in[4].gl_Position.z * 0.5 + 0.5;
+	//float v0Depth = gl_in[0].gl_Position.z * 0.5 + 0.5;
+	//float v2Depth = gl_in[2].gl_Position.z * 0.5 + 0.5;
+	//float v4Depth = gl_in[4].gl_Position.z * 0.5 + 0.5;
+	float v0Depth = positions[0].z * 0.5 + 0.5;
+	float v2Depth = positions[2].z * 0.5 + 0.5;
+	float v4Depth = positions[4].z * 0.5 + 0.5;
 
 	vec2 v0ScreenPos = positions[0].xy * 0.5 + 0.5;
 	vec2 v2ScreenPos = positions[2].xy * 0.5 + 0.5;
@@ -69,31 +84,34 @@ void main(){
 	
 	if (faceFront > 0){
 		if(side1Front < 0 && (v0Visible || v2Visible)){
+			emitEdge(v0ScreenPos, v2ScreenPos, 0, 2);/*
 			screenPos = v0ScreenPos;
 			gl_Position = gl_in[0].gl_Position;
 			EmitVertex();
 			screenPos = v2ScreenPos;
 			gl_Position = gl_in[2].gl_Position;
 			EmitVertex();
-			EndPrimitive();
+			EndPrimitive();*/
 		}
 		if(side2Front < 0 && (v2Visible || v4Visible)){
+			emitEdge(v2ScreenPos, v4ScreenPos, 2, 4);/*
 			screenPos = v2ScreenPos;
 			gl_Position = gl_in[2].gl_Position;
 			EmitVertex();
 			screenPos = v4ScreenPos;
 			gl_Position = gl_in[4].gl_Position;
 			EmitVertex();
-			EndPrimitive();
+			EndPrimitive();*/
 		}
 		if(side3Front < 0 && (v4Visible || v0Visible)){
+			emitEdge(v4ScreenPos, v0ScreenPos, 4, 0);/*
 			screenPos = v4ScreenPos;
 			gl_Position = gl_in[4].gl_Position;
 			EmitVertex();
 			screenPos = v0ScreenPos;
 			gl_Position = gl_in[0].gl_Position;
 			EmitVertex();
-			EndPrimitive();
+			EndPrimitive();*/
 		}
 	}
 	

@@ -19,7 +19,7 @@ namespace Copperplate {
 	}
 
 	glm::vec4 Image::Sample(glm::vec2 screenPos) {
-		glm::vec2 pos = glm::clamp(screenPos, glm::vec2(0.0f), glm::vec2(m_Size) - glm::vec2(1.0f));
+		glm::vec2 pos = glm::clamp(screenPos, glm::vec2(0.01f), glm::vec2(m_Size) - glm::vec2(1.0f));
 		glm::vec2 fraction = glm::fract(pos);
 
 		if (fraction == glm::vec2(0.0f))

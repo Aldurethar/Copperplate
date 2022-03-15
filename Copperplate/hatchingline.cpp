@@ -57,9 +57,9 @@ namespace Copperplate {
 
 		for (int i = 1; i < m_NumPoints; i++) {
 			float distance = glm::distance(m_Points[i], lastPoint);
-			if (distance > Hatching::ExtendRadius) {
+			if (distance > m_Layer.m_Settings.m_ExtendRadius) {
 				// if the distance is too big, add additional points
-				int numSteps = ceil(distance / Hatching::ExtendRadius);
+				int numSteps = ceil(distance / m_Layer.m_Settings.m_ExtendRadius);
 				glm::vec2 step = (m_Points[i] - m_Points[i - 1]) / (float)numSteps;
 				for (int j = 1; j <= numSteps; j++) {
 					lastPoint = lastPoint + step;
@@ -73,7 +73,7 @@ namespace Copperplate {
 					currSeed++;
 				}
 				while (!affectedSeeds.empty()) {
-					ScreenSpaceSeed* closest;
+					ScreenSpaceSeed* closest = affectedSeeds.front();
 					float closestDist = 1000.0f;
 					for (ScreenSpaceSeed* seed : affectedSeeds) {
 						float seedDist = glm::distance(seed->m_Pos, m_Points[i - 1]);
@@ -82,14 +82,14 @@ namespace Copperplate {
 							closestDist = seedDist;
 						}
 					}
-					affectedSeeds.remove(closest);
 					int offset = round(glm::length(closest->m_Pos - m_Points[i - 1]) / glm::length(step));
 					if (offset > numSteps) offset = numSteps;
 					newSeeds.push_back(closest);
 					newSeedPlacements.push_back(newPoints.size() - 1 - numSteps + offset);
+					affectedSeeds.remove(closest);
 				}
 			}
-			else if (distance < Hatching::ExtendRadius * 0.5f && i < m_NumPoints - 1) {
+			else if (distance < m_Layer.m_Settings.m_ExtendRadius * 0.5f && i < m_NumPoints - 1) {
 				// if the distance is too small, skip the current point, but not if it is the end of the line
 				while (currSeed < m_Seeds.size() && m_SeedPlacements[currSeed] <= i) {
 					newSeeds.push_back(m_Seeds[currSeed]);
@@ -164,7 +164,7 @@ namespace Copperplate {
 
 	HatchingLine* HatchingLine::SplitFromCollision() {
 		int collisionIndex = 0;
-		for (int i = m_SeedPlacements.front(); i <= m_SeedPlacements.back(); i++) {
+		for (int i = 0; i < m_NumPoints; i++) {
 			if (m_Layer.HasCollision(m_Points[i], true)) {
 				collisionIndex = i;
 				break;
@@ -206,7 +206,7 @@ namespace Copperplate {
 		for (int i = 1; i < m_Points.size() - 1; i++) {
 			glm::vec2 a = glm::normalize(m_Points[i] - m_Points[i - 1]);
 			glm::vec2 b = glm::normalize(m_Points[i + 1] - m_Points[i]);
-			if (glm::dot(a, b) < cos(Hatching::SplitAngle)) {
+			if (glm::dot(a, b) < cos(m_Layer.m_Settings.m_SplitAngle)) {
 				splitIndex = i;
 				break;
 			}
@@ -282,7 +282,7 @@ namespace Copperplate {
 	bool HatchingLine::NeedsResampling() {
 		for (int i = 1; i < m_NumPoints; i++) {
 			float dist = glm::distance(m_Points[i], m_Points[i - 1]);
-			if (dist > Hatching::ExtendRadius || dist < (Hatching::ExtendRadius * 0.5f)) {
+			if (dist > m_Layer.m_Settings.m_ExtendRadius || dist < (m_Layer.m_Settings.m_ExtendRadius * 0.5f)) {
 				return true;
 			}
 		}
@@ -319,7 +319,7 @@ namespace Copperplate {
 		for (int i = 1; i < m_Points.size() - 1; i++) {
 			glm::vec2 a = glm::normalize(m_Points[i] - m_Points[i - 1]);		
 			glm::vec2 b = glm::normalize(m_Points[i + 1] - m_Points[i]);
-			if (glm::dot(a, b) < cos(Hatching::SplitAngle)) {
+			if (glm::dot(a, b) < cos(m_Layer.m_Settings.m_SplitAngle)) {
 				return true;
 			}
 		}

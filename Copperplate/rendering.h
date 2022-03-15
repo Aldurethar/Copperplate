@@ -86,6 +86,9 @@ namespace Copperplate {
 
 		void DrawFramebufferContent(EFramebuffers framebuffer);
 
+		void SaveCurrFramebufferContent(const std::string& path);
+		
+		void DrawTexFullscreen(unsigned int texture);
 
 	private:
 
@@ -120,6 +123,9 @@ namespace Copperplate {
 		static int NumPointsPerHatch;
 		static EHatchingDirections HatchingDirection;
 		static EFramebuffers FramebufferToDisplay;
+		static bool RecordScreenShot;
+		static bool RecordVideo;
+		static int RecordFrameCount;
 	};
 
 	// Callback Functions for the window

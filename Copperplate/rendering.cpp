@@ -9,8 +9,12 @@
 #include <glm\gtx\string_cast.hpp>
 
 #include <iostream>
+#include "utility.h"
 
 namespace Copperplate {
+
+	const int WINDOW_WIDTH = 2400;
+	const int WINDOW_HEIGHT = 1050;
 
 	//const glm::vec4 IMAGE_CLEARCOLOR = glm::vec4(0.89f, 0.87f, 0.53f, 1.0f);
 	const glm::vec4 IMAGE_CLEARCOLOR = glm::vec4(0.92f, 0.87f, 0.62f, 1.0f);
@@ -33,6 +37,9 @@ namespace Copperplate {
 	int DisplaySettings::NumPointsPerHatch = -1;
 	EHatchingDirections DisplaySettings::HatchingDirection = EHatchingDirections::HD_LargestCurvature;
 	EFramebuffers DisplaySettings::FramebufferToDisplay = EFramebuffers::FB_Default;
+	bool DisplaySettings::RecordScreenShot = false;
+	bool DisplaySettings::RecordVideo = false;
+	int DisplaySettings::RecordFrameCount = 0;
 
 
 	// Window Class
@@ -47,7 +54,7 @@ namespace Copperplate {
 		// setup OpenGL context and window
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-		m_Window = glfwCreateWindow(1280, 720, "Copperplate", NULL, NULL);
+		m_Window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Copperplate", NULL, NULL);
 		if (!m_Window) {
 			std::cerr << "Window Creation Failed!";
 			glfwTerminate();
@@ -60,7 +67,7 @@ namespace Copperplate {
 			glfwDestroyWindow(m_Window);
 			glfwTerminate();
 		}
-		glViewport(0, 0, 1280, 720);
+		glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
 		// hookup callback functions
 		glfwSetFramebufferSizeCallback(m_Window, GlfwFramebufferSizeCallback);
@@ -139,6 +146,7 @@ namespace Copperplate {
 
 	void Camera::SetViewportSize(int width, int height) {
 		m_ProjectionMatrix = glm::perspective(glm::radians(45.0f), (float) width / (float) height, 0.1f, 100.0f);
+		//m_ProjectionMatrix = glm::perspective(glm::radians(15.0f), (float)width / (float)height, 0.1f, 100.0f);
 	}
 
 	void Camera::SetPosition(float azimuth, float height, float zoom) {
@@ -414,6 +422,22 @@ namespace Copperplate {
 		unsigned int tex = m_Framebuffers[framebuffer].m_Texture;
 		glBindVertexArray(m_ScreenQuadVAO);
 		glBindTexture(GL_TEXTURE_2D, tex);
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	}
+
+	void Renderer::SaveCurrFramebufferContent(const std::string& path) {
+		const glm::ivec2 size = glm::ivec2(m_Window->GetWidth(), m_Window->GetHeight());
+		unsigned char* buffer{ new unsigned char[size.x * size.y * 3] };
+		glCheckError();
+		glReadPixels(0, 0, size.x, size.y, GL_RGB, GL_UNSIGNED_BYTE, buffer);
+		glCheckError();
+		writePngImage(path, size, buffer, 3);
+		delete[] buffer;
+	}
+
+	void Renderer::DrawTexFullscreen(unsigned int texture) {
+		glBindVertexArray(m_ScreenQuadVAO);
+		glBindTexture(GL_TEXTURE_2D, texture);
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	}
 

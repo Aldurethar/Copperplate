@@ -3,6 +3,7 @@
 #include "mesh.h"
 #include "shader.h"
 #include "rendering.h"
+#include "utility.h"
 #include <unordered_set>
 
 
@@ -18,6 +19,47 @@ namespace Copperplate {
 		}
 	};
 
+	struct HatchingSettings {
+		float m_LineDistance =		4.0f;
+		float m_CollisionRadius =	m_LineDistance * 0.7f;
+		float m_CoverRadius =		m_LineDistance * 1.0f;
+		float m_TrimRadius =		m_LineDistance * 0.7f;
+		float m_ExtendRadius =		m_LineDistance * 1.2f;
+		float m_MergeRadius =		m_LineDistance * 1.3f;
+		float m_SplitAngle =		degToRad(20);
+		float m_ParallelAngle =		degToRad(10);
+		float m_ExtendStraightVsCloseWeight = 0.8f;
+		float m_OptiStepSize = 1.0f;
+		int	  m_NumOptiSteps = 4;
+		float m_OptiSeedWeight = 2.0f;
+		float m_OptiSmoothWeight = 5.0f;
+		float m_OptiFieldWeight = 3.0f;
+		float m_OptiSpringWeight = 2.0f;
+
+		float m_MinLineWidth =	1.0f;
+		float m_MaxLineWidth =	3.0f;
+		float m_MinShade =		0.0f;
+		float m_MaxShade =		1.0f;
+		EHatchingDirections m_Direction = EHatchingDirections::HD_LargestCurvature;
+
+		HatchingSettings(float lineDistance, float splitAngleDeg, float parallelAngleDeg, float minWidth, float maxWidth, float minShade, float maxShade, EHatchingDirections direction) {
+			m_LineDistance = lineDistance;
+			m_CollisionRadius = m_LineDistance * 0.7f;
+			m_CoverRadius = m_LineDistance * 1.0f;
+			m_TrimRadius = m_LineDistance * 0.7f;
+			m_ExtendRadius = m_LineDistance * 1.2f;
+			m_MergeRadius = m_LineDistance * 1.3f;
+			m_SplitAngle = degToRad(splitAngleDeg);
+			m_ParallelAngle = degToRad(parallelAngleDeg);
+
+			m_MinLineWidth = minWidth;
+			m_MaxLineWidth = maxWidth;
+			m_MinShade = minShade;
+			m_MaxShade = maxShade;
+			m_Direction = direction;
+		}
+	};
+
 	//Forward Declarations
 	struct ScreenSpaceSeed;
 	class Hatching;
@@ -26,7 +68,7 @@ namespace Copperplate {
 
 	public:
 
-		HatchingLayer(glm::ivec2 gridSize, Hatching& hatching, float minLineWidth, float maxLineWidth, float minShade, float maxShade, EHatchingDirections direction);
+		HatchingLayer(glm::ivec2 gridSize, Hatching& hatching, HatchingSettings settings);
 
 		void ResetCollisions();
 		void AddContourCollision(const std::vector<glm::vec2>& contourSegments);
@@ -36,6 +78,11 @@ namespace Copperplate {
 		void DrawCollision();
 		
 		bool HasCollision(glm::vec2 screenPos, bool onlyContours);
+		
+		HatchingSettings m_Settings;
+
+		//For Statistics
+		int CountNearbyColPoints(glm::vec2 screenPos, float radius);
 
 	private:
 
@@ -81,13 +128,7 @@ namespace Copperplate {
 
 		Hatching& m_Hatching;
 		std::list<HatchingLine> m_HatchingLines;
-
-		float m_MinLineWidth;
-		float m_MaxLineWidth;
-		float m_MinShade;
-		float m_MaxShade;
-		EHatchingDirections m_Direction;
-
+		
 		glm::ivec2 m_GridSize;
 		std::vector<std::unordered_set<ScreenSpaceSeed*>> m_UnusedSeedsGrid;
 		std::vector<std::unordered_set<CollisionPoint>> m_CollisionPointsGrid;
@@ -102,6 +143,8 @@ namespace Copperplate {
 		unsigned int m_CollisionVBO;
 		int m_NumCollisionPoints;
 
+
+		
 	};
 
 }

@@ -12,6 +12,9 @@ set(SOURCE_LIST
 	hatchinglayer.h hatchinglayer.cpp
 	image.h image.cpp
 	utility.h utility.cpp
+	statistics.h statistics.cpp
+	stb_image_write.h
+	stb_image.h
 	shaders/flatcolor.vert
 	shaders/flatcolor.frag
 	shaders/contours.vert

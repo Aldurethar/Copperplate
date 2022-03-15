@@ -1,6 +1,7 @@
 #pragma once
 
 #include "application.h"
+#include "statistics.h"
 
 #include <glm\gtx\string_cast.hpp>
 
@@ -23,15 +24,18 @@ namespace Copperplate {
 
 	void Application::Run() {
 		while (!ShouldClose) {
+			Statistics::Get().newFrame();
 			// Poll and handle Input
 			glfwPollEvents();
+
+			m_Scene->Update();
 
 			//Render
 			glEnable(GL_DEPTH_TEST);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 			m_Scene->Draw();
-			
+						
 			m_Window->SwapBuffers();
 		}
 	}
@@ -94,16 +98,10 @@ namespace Copperplate {
 			DisplaySettings::NumPointsPerHatch--;
 		}
 		else if (key == GLFW_KEY_PAGE_UP) {
-			Hatching::LineDistance *= 1.2f;
-			Hatching::RecalculateConstants();
-			DisplaySettings::RegenerateHatching = true;
-			std::cout << "Line Separation Distance is now " << Hatching::LineDistance << std::endl;
+			
 		}
 		else if (key == GLFW_KEY_PAGE_DOWN) {
-			Hatching::LineDistance /= 1.2f;
-			Hatching::RecalculateConstants();
-			DisplaySettings::RegenerateHatching = true;
-			std::cout << "Line Separation Distance is now " << Hatching::LineDistance << std::endl;
+			
 		}
 		else if (key == GLFW_KEY_1) {
 			DisplaySettings::FramebufferToDisplay = EFramebuffers::FB_Default;
@@ -127,25 +125,52 @@ namespace Copperplate {
 			DisplaySettings::FramebufferToDisplay = EFramebuffers::FB_ShadingGradient;
 		}
 		else if (key == GLFW_KEY_F1) {
-			DisplaySettings::HatchingDirection = EHatchingDirections::HD_LargestCurvature;
+			m_Scene->SetLayer1Direction(HD_LargestCurvature);
+			//DisplaySettings::HatchingDirection = EHatchingDirections::HD_LargestCurvature;
 		}
 		else if (key == GLFW_KEY_F2) {
-			DisplaySettings::HatchingDirection = EHatchingDirections::HD_SmallestCurvature;
+			m_Scene->SetLayer1Direction(HD_SmallestCurvature);
+			//DisplaySettings::HatchingDirection = EHatchingDirections::HD_SmallestCurvature;
 		}
 		else if (key == GLFW_KEY_F3) {
-			DisplaySettings::HatchingDirection = EHatchingDirections::HD_Normal;
+			m_Scene->SetLayer1Direction(HD_Normal);
+			//DisplaySettings::HatchingDirection = EHatchingDirections::HD_Normal;
 		}
 		else if (key == GLFW_KEY_F4) {
-			DisplaySettings::HatchingDirection = EHatchingDirections::HD_Tangent;
+			m_Scene->SetLayer1Direction(HD_Tangent);
+			//DisplaySettings::HatchingDirection = EHatchingDirections::HD_Tangent;
 		}
 		else if (key == GLFW_KEY_F5) {
-			DisplaySettings::HatchingDirection = EHatchingDirections::HD_ShadeGradient;
+			m_Scene->SetLayer1Direction(HD_ShadeGradient);
+			//DisplaySettings::HatchingDirection = EHatchingDirections::HD_ShadeGradient;
 		}
 		else if (key == GLFW_KEY_F6) {
-		DisplaySettings::HatchingDirection = EHatchingDirections::HD_ShadeNormal;
+			m_Scene->SetLayer1Direction(HD_ShadeNormal);
+			//DisplaySettings::HatchingDirection = EHatchingDirections::HD_ShadeNormal;
 		}
 
 		// General Window input
+		else if (key == GLFW_KEY_F7) {
+			m_Scene->ExampleAnimation();
+		}
+		else if (key == GLFW_KEY_F8) {
+			Statistics::Get().printMeanValues();
+		}
+		else if (key == GLFW_KEY_F9) {
+			Statistics::Get().printLastFrame();
+		}
+		else if (key == GLFW_KEY_F10) {
+			if (!DisplaySettings::RecordVideo) {
+				DisplaySettings::RecordVideo = true;
+				DisplaySettings::RecordFrameCount = 0;
+			}
+			else {
+				DisplaySettings::RecordVideo = false;
+			}
+		}
+		else if (key == GLFW_KEY_F11) {
+		DisplaySettings::RecordScreenShot = true;
+		}
 		else if (key == GLFW_KEY_ESCAPE) {
 			ShouldClose = true;
 		}

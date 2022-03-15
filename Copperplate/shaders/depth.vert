@@ -11,7 +11,7 @@ uniform mat4 projection;
 void main(){
 	vec4 viewPos = view * model * vec4(aPos, 1.0);
 	vec4 screenPos = projection * viewPos;	
-	Depth = screenPos.z * 0.5 + 0.5;
+	Depth = (screenPos.z / screenPos.w) * 0.5 + 0.5;
 	gl_Position = screenPos;
 	
 	//gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
